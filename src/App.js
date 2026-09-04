@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter, Routes, Route, useNavigate, Link } from 'react-router-dom';
 import { initializeApp } from 'firebase/app';
 import { getDatabase, ref, onValue, set, push, remove, update } from 'firebase/database';
@@ -368,7 +368,7 @@ function SongListView({ songs, members, showAdminActions = false, onEditSong, on
   );
 }
 
-// --- [관리자] 곡 세션 및 인원 수정 모달 ---
+// --- [관리자] 곡 세션 및 인원 수정 모달 (실시간 자동 저장 및 상태 반영) ---
 function EditSongModal({ song, members, currentUser, onClose }) {
   const [title, setTitle] = useState(song.title || '');
   const [artist, setArtist] = useState(song.artist || '');
@@ -381,119 +381,20 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     })) : []
   );
 
-  const addSession = () => {
-    setSessions([...sessions, {
-      sessionName: '보컬',
-      detailName: '',
-      difficulty: '',
-      requiredCount: 1,
-      assignedMembers: {}
-    }]);
-  };
+  // 실시간 저장 상태 ('saved' | 'saving')
+  const [saveStatus, setSaveStatus] = useState('saved');
+  const isFirstRender = useRef(true);
 
-  const removeSession = (index) => {
-    setSessions(sessions.filter((_, i) => i !== index));
-  };
-
-  const updateSession = (index, field, value) => {
-    const updated = [...sessions];
-    updated[index][field] = value;
-    setSessions(updated);
-  };
-
-  const toggleMemberInSession = (sessionIndex, memberId) => {
-    const updated = [...sessions];
-    const currentMap = { ...(updated[sessionIndex].assignedMembers || {}) };
-    
-    if (currentMap[memberId]) {
-      delete currentMap[memberId];
-    } else {
-      currentMap[memberId] = { rank: '', isRequester: false, isPending: false };
+  // ★ 실시간 자동 저장 및 Firebase Sync
+  useEffect(() => {
+    // 최초 모달 열릴 때는 저장 실행 방지
+    if (isFirstRender.current) {
+      isFirstRender.current = false;
+      return;
     }
-    updated[sessionIndex].assignedMembers = currentMap;
-    setSessions(updated);
-  };
 
-  const updateMemberRank = (sessionIndex, memberId, rankValue) => {
-    const updated = [...sessions];
-    if (updated[sessionIndex].assignedMembers[memberId]) {
-      updated[sessionIndex].assignedMembers[memberId].rank = rankValue;
-    }
-    setSessions(updated);
-  };
+    setSaveStatus('saving');
 
-  const toggleRequester = (sessionIndex, memberId) => {
-    const updated = [...sessions];
-    if (updated[sessionIndex].assignedMembers[memberId]) {
-      const currentVal = updated[sessionIndex].assignedMembers[memberId].isRequester;
-      updated[sessionIndex].assignedMembers[memberId].isRequester = !currentVal;
-    }
-    setSessions(updated);
-  };
-
-  const togglePending = (sessionIndex, memberId) => {
-    const updated = [...sessions];
-    if (updated[sessionIndex].assignedMembers[memberId]) {
-      const currentVal = updated[sessionIndex].assignedMembers[memberId].isPending;
-      updated[sessionIndex].assignedMembers[memberId].isPending = !currentVal;
-    }
-    setSessions(updated);
-  };
-
-  // ★ [수정 및 반영된 핵심 로직] 선택 여부, 지망 순위, 이름순에 맞춘 실시간 자동 정렬 함수
-  const getFilteredMembersForSession = (sessionIndex, sessionName) => {
-    const session = sessions[sessionIndex];
-    const assignedMap = session?.assignedMembers || {};
-
-    // 1. 세션 파트 기준 1차 필터링
-    const filtered = Object.entries(members).filter(([_, m]) => {
-      if (sessionName === '리드기타' || sessionName === '백킹기타') {
-        return m.part === '기타';
-      }
-      if (sessionName === '키보드1' || sessionName === '키보드2') {
-        return m.part === '키보드';
-      }
-      return m.part === sessionName;
-    });
-
-    // 2. 실시간 자동 정렬 (선택 여부 -> 순위 -> 이름순)
-    filtered.sort(([aId, aMember], [bId, bMember]) => {
-      const aDetail = assignedMap[aId];
-      const bDetail = assignedMap[bId];
-
-      const aChecked = !!aDetail;
-      const bChecked = !!bDetail;
-
-      // [조건 1] 선택(체크)된 학회원이 최우선
-      if (aChecked && !bChecked) return -1;
-      if (!aChecked && bChecked) return 1;
-
-      // [조건 2] 둘 다 선택된 경우 (지망 순위 반영)
-      if (aChecked && bChecked) {
-        const aRank = aDetail.rank !== '' && aDetail.rank !== undefined ? Number(aDetail.rank) : null;
-        const bRank = bDetail.rank !== '' && bDetail.rank !== undefined ? Number(bDetail.rank) : null;
-
-        // 둘 다 순위가 존재함 -> 숫자가 작은 순 (1지망 > 2지망...)
-        if (aRank !== null && bRank !== null) {
-          if (aRank !== bRank) return aRank - bRank;
-        }
-        // a만 순위가 존재함 -> a가 앞으로
-        if (aRank !== null && bRank === null) return -1;
-        // b만 순위가 존재함 -> b가 앞으로
-        if (aRank === null && bRank !== null) return 1;
-
-        // 순위가 같거나 입력되지 않은 경우 이름순
-        return aMember.name.localeCompare(bMember.name, 'ko');
-      }
-
-      // [조건 3] 둘 다 선택되지 않은 경우 -> 가나다순 정렬
-      return aMember.name.localeCompare(bMember.name, 'ko');
-    });
-
-    return filtered;
-  };
-
-  const handleSave = () => {
     const updates = {};
     const logDetails = [];
 
@@ -516,69 +417,157 @@ function EditSongModal({ song, members, currentUser, onClose }) {
 
     updates[`songs/${song.id}/sessions`] = sessions;
 
-    sessions.forEach((s, idx) => {
-      const sLabel = formatSessionLabel(s);
-      const oldSession = song.sessions ? song.sessions[idx] : null;
-      const oldAssigned = oldSession ? oldSession.assignedMembers || {} : {};
-      const newAssigned = s.assignedMembers || {};
+    // 디바운싱(연속 클릭 시 마지막 변경사항만 최종 처리)
+    const timer = setTimeout(() => {
+      update(ref(db), updates)
+        .then(() => {
+          if (logDetails.length > 0) {
+            logActivity(currentUser, `[${song.title} - ${song.artist}] 수정: ${logDetails.join(' / ')}`);
+          }
+          setSaveStatus('saved');
+        })
+        .catch(err => {
+          console.error("자동 저장 실패:", err);
+          setSaveStatus('saved');
+        });
+    }, 300);
 
-      Object.keys(newAssigned).forEach(mId => {
-        const mName = members[mId] ? members[mId].name : '알수없음';
-        if (!oldAssigned[mId]) {
-          logDetails.push(`[${sLabel}] ${mName} 추가`);
-        } else {
-          if (oldAssigned[mId].isPending !== newAssigned[mId].isPending) {
-            logDetails.push(`[${sLabel}] ${mName} (보류) ${newAssigned[mId].isPending ? '설정' : '해제'}`);
-          }
-          if (oldAssigned[mId].isRequester !== newAssigned[mId].isRequester) {
-            logDetails.push(`[${sLabel}] ${mName} (신청자) ${newAssigned[mId].isRequester ? '지정' : '해제'}`);
-          }
-          if (oldAssigned[mId].rank !== newAssigned[mId].rank) {
-            logDetails.push(`[${sLabel}] ${mName} 지망순위 ${oldAssigned[mId].rank || '없음'} -> ${newAssigned[mId].rank || '없음'}`);
-          }
-        }
-      });
+    return () => clearTimeout(timer);
+  }, [title, artist, isCompleted, isDropped, sessions]);
 
-      Object.keys(oldAssigned).forEach(mId => {
-        const mName = members[mId] ? members[mId].name : '알수없음';
-        if (!newAssigned[mId]) {
-          logDetails.push(`[${sLabel}] ${mName} 명단 제거`);
-        }
-      });
+  const addSession = () => {
+    setSessions(prev => [...prev, {
+      sessionName: '보컬',
+      detailName: '',
+      difficulty: '',
+      requiredCount: 1,
+      assignedMembers: {}
+    }]);
+  };
+
+  const removeSession = (index) => {
+    setSessions(prev => prev.filter((_, i) => i !== index));
+  };
+
+  const updateSession = (index, field, value) => {
+    setSessions(prev => {
+      const updated = [...prev];
+      updated[index][field] = value;
+      return updated;
+    });
+  };
+
+  const toggleMemberInSession = (sessionIndex, memberId) => {
+    setSessions(prev => {
+      const updated = [...prev];
+      const currentMap = { ...(updated[sessionIndex].assignedMembers || {}) };
+      
+      if (currentMap[memberId]) {
+        delete currentMap[memberId];
+      } else {
+        currentMap[memberId] = { rank: '', isRequester: false, isPending: false };
+      }
+      updated[sessionIndex].assignedMembers = currentMap;
+      return updated;
+    });
+  };
+
+  const updateMemberRank = (sessionIndex, memberId, rankValue) => {
+    setSessions(prev => {
+      const updated = [...prev];
+      if (updated[sessionIndex].assignedMembers[memberId]) {
+        updated[sessionIndex].assignedMembers[memberId].rank = rankValue;
+      }
+      return updated;
+    });
+  };
+
+  const toggleRequester = (sessionIndex, memberId) => {
+    setSessions(prev => {
+      const updated = [...prev];
+      if (updated[sessionIndex].assignedMembers[memberId]) {
+        const currentVal = updated[sessionIndex].assignedMembers[memberId].isRequester;
+        updated[sessionIndex].assignedMembers[memberId].isRequester = !currentVal;
+      }
+      return updated;
+    });
+  };
+
+  const togglePending = (sessionIndex, memberId) => {
+    setSessions(prev => {
+      const updated = [...prev];
+      if (updated[sessionIndex].assignedMembers[memberId]) {
+        const currentVal = updated[sessionIndex].assignedMembers[memberId].isPending;
+        updated[sessionIndex].assignedMembers[memberId].isPending = !currentVal;
+      }
+      return updated;
+    });
+  };
+
+  const getFilteredMembersForSession = (sessionIndex, sessionName) => {
+    const session = sessions[sessionIndex];
+    const assignedMap = session?.assignedMembers || {};
+
+    const filtered = Object.entries(members).filter(([_, m]) => {
+      if (sessionName === '리드기타' || sessionName === '백킹기타') {
+        return m.part === '기타';
+      }
+      if (sessionName === '키보드1' || sessionName === '키보드2') {
+        return m.part === '키보드';
+      }
+      return m.part === sessionName;
     });
 
-    update(ref(db), updates)
-      .then(() => {
-        if (logDetails.length > 0) {
-          logActivity(currentUser, `[${song.title} - ${song.artist}] 수정: ${logDetails.join(' / ')}`);
+    filtered.sort(([aId, aMember], [bId, bMember]) => {
+      const aDetail = assignedMap[aId];
+      const bDetail = assignedMap[bId];
+
+      const aChecked = !!aDetail;
+      const bChecked = !!bDetail;
+
+      if (aChecked && !bChecked) return -1;
+      if (!aChecked && bChecked) return 1;
+
+      if (aChecked && bChecked) {
+        const aRank = aDetail.rank !== '' && aDetail.rank !== undefined ? Number(aDetail.rank) : null;
+        const bRank = bDetail.rank !== '' && bDetail.rank !== undefined ? Number(bDetail.rank) : null;
+
+        if (aRank !== null && bRank !== null) {
+          if (aRank !== bRank) return aRank - bRank;
         }
-        onClose();
-      })
-      .catch(err => alert("저장 실패: " + err.message));
+        if (aRank !== null && bRank === null) return -1;
+        if (aRank === null && bRank !== null) return 1;
+
+        return aMember.name.localeCompare(bMember.name, 'ko');
+      }
+
+      return aMember.name.localeCompare(bMember.name, 'ko');
+    });
+
+    return filtered;
   };
 
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden shadow-2xl">
         
-        {/* === [상단 고정 헤더 영역] === */}
+        {/* === [상단 고정 헤더 영역 - 실시간 저장 상태 반영] === */}
         <div className="p-5 border-b bg-white space-y-4 shrink-0 shadow-sm z-10">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-bold text-gray-900">곡 세션 및 인원 상세 수정</h2>
-            <div className="flex gap-2">
-              <button 
-                onClick={onClose} 
-                className="px-3.5 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition"
-              >
-                취소
-              </button>
-              <button 
-                onClick={handleSave} 
-                className="px-3.5 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition shadow-sm"
-              >
-                저장
-              </button>
+            <div className="flex items-center gap-3">
+              <h2 className="text-lg font-bold text-gray-900">곡 세션 및 인원 상세 수정</h2>
+              <span className={`text-xs font-bold transition-all duration-200 ${
+                saveStatus === 'saving' ? 'text-amber-500 animate-pulse' : 'text-emerald-600'
+              }`}>
+                {saveStatus === 'saving' ? '● 저장 중...' : '● 저장됨'}
+              </span>
             </div>
+            <button 
+              onClick={onClose} 
+              className="px-3.5 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition"
+            >
+              닫기
+            </button>
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -656,7 +645,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
           </div>
 
           {sessions.map((session, sIdx) => {
-            // ★ 수정된 함수에 sIdx(세션 인덱스) 전달
             const eligibleMembers = getFilteredMembersForSession(sIdx, session.sessionName);
             const showDetailName = session.sessionName.includes('키보드');
             const showDifficulty = session.sessionName !== '보컬';
@@ -852,12 +840,10 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
   const [editingSong, setEditingSong] = useState(null);
   const [targetInput, setTargetInput] = useState(targetSongCount);
 
-  // 검색 및 필터 상태
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAvailableOnly, setFilterAvailableOnly] = useState(false);
   const [filterCompletedOnly, setFilterCompletedOnly] = useState(false);
 
-  // 미완성 곡 일괄 제거 대상
   const [selectedMemberToRemove, setSelectedMemberToRemove] = useState('');
 
   const [newTitle, setNewTitle] = useState('');
@@ -1201,7 +1187,6 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
         <ProgressBarStatus songs={songs} targetSongCount={targetSongCount} />
       </div>
 
-      {/* === [탭 메뉴 영역] === */}
       <div className="flex border-b overflow-x-auto">
         <button 
           onClick={() => setActiveTab('manage')}
