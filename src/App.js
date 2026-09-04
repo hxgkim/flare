@@ -122,20 +122,28 @@ const renderAssignedMembers = (assignedMembers, members) => {
   );
 };
 
-// --- [공통 UI] 로딩바 형태의 실시간 현황 컴포넌트 ---
-function ProgressBarStatus({ completedCount, targetSongCount }) {
+// --- [공통 UI] 로딩바 형태의 실시간 곡 완성도 컴포넌트 ---
+function ProgressBarStatus({ songs, targetSongCount }) {
+  const completedSongs = songs.filter(s => s.isCompleted);
+  const completedCount = completedSongs.length;
+  const completedTitles = completedSongs.map(s => s.title).join(', ');
+
   const percentage = targetSongCount > 0 
     ? Math.min(Math.round((completedCount / targetSongCount) * 100), 100) 
     : 0;
 
   return (
     <div className="bg-white border rounded-xl p-4 shadow-sm space-y-2">
-      <div className="flex justify-between items-center text-sm">
-        <span className="font-bold text-gray-700 flex items-center gap-1.5">
-          <span>🎵</span> 현황
-        </span>
-        <span className="font-extrabold text-blue-600">
-          {completedCount} / {targetSongCount} 곡 ({percentage}%)
+      <div className="flex flex-col sm:flex-row justify-between sm:items-center text-sm gap-1">
+        <div className="font-bold text-gray-700 flex items-center gap-1.5 overflow-hidden">
+          <span className="shrink-0">🎵</span>
+          <span className="shrink-0">곡 완성도:</span>
+          <span className="text-gray-600 font-normal truncate">
+            {completedTitles ? `${completedTitles} ~~` : '없음'}
+          </span>
+        </div>
+        <span className="font-extrabold text-blue-600 shrink-0">
+          {completedCount} / {targetSongCount}곡 ({percentage}%)
         </span>
       </div>
 
@@ -155,8 +163,8 @@ function ProgressBarStatus({ completedCount, targetSongCount }) {
   );
 }
 
-// --- [공통 UI] 검색 및 잔여 인원 필터 컴포넌트 ---
-function SongFilterBar({ searchTerm, setSearchTerm, filterAvailableOnly, setFilterAvailableOnly }) {
+// --- [공통 UI] 검색 및 완성/잔여 인원 필터 컴포넌트 ---
+function SongFilterBar({ searchTerm, setSearchTerm, filterAvailableOnly, setFilterAvailableOnly, filterCompletedOnly, setFilterCompletedOnly }) {
   return (
     <div className="bg-white p-3 rounded-xl border shadow-sm flex flex-col sm:flex-row gap-3 items-center justify-between">
       <div className="w-full sm:w-72 relative">
@@ -170,15 +178,33 @@ function SongFilterBar({ searchTerm, setSearchTerm, filterAvailableOnly, setFilt
         <span className="absolute left-2.5 top-2.5 text-xs text-gray-400">🔍</span>
       </div>
 
-      <label className="inline-flex items-center gap-2 cursor-pointer self-start sm:self-auto text-xs font-bold text-gray-700 select-none">
-        <input 
-          type="checkbox" 
-          checked={filterAvailableOnly}
-          onChange={e => setFilterAvailableOnly(e.target.checked)}
-          className="rounded text-emerald-600 focus:ring-0 w-4 h-4 cursor-pointer"
-        />
-        <span>⚡ 잔여 인원(빈 세션) 있는 곡만 보기</span>
-      </label>
+      <div className="flex items-center gap-4 self-start sm:self-auto text-xs font-bold text-gray-700 select-none">
+        <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          <input 
+            type="checkbox" 
+            checked={filterCompletedOnly}
+            onChange={e => {
+              setFilterCompletedOnly(e.target.checked);
+              if (e.target.checked) setFilterAvailableOnly(false);
+            }}
+            className="rounded text-blue-600 focus:ring-0 w-4 h-4 cursor-pointer"
+          />
+          <span>✨ 완성</span>
+        </label>
+
+        <label className="inline-flex items-center gap-1.5 cursor-pointer">
+          <input 
+            type="checkbox" 
+            checked={filterAvailableOnly}
+            onChange={e => {
+              setFilterAvailableOnly(e.target.checked);
+              if (e.target.checked) setFilterCompletedOnly(false);
+            }}
+            className="rounded text-emerald-600 focus:ring-0 w-4 h-4 cursor-pointer"
+          />
+          <span>⚡ 잔여 인원</span>
+        </label>
+      </div>
     </div>
   );
 }
@@ -196,7 +222,7 @@ function SongListView({ songs, members, showAdminActions = false, onEditSong, on
             <tr className="bg-emerald-800 text-white text-sm">
               <th className="p-3 w-28 text-center border-r border-emerald-700">잔여 인원</th>
               <th className="p-3 w-64 border-r border-emerald-700">곡명 - 가수</th>
-              <th className="p-3">세션 정보 및 신청 현황</th>
+              <th className="p-3">신청 현황</th>
               {showAdminActions && <th className="p-3 w-40 text-center border-l border-emerald-700">관리</th>}
             </tr>
           </thead>
@@ -700,12 +726,15 @@ function EditSongModal({ song, members, currentUser, onClose }) {
 function PublicPage({ songs, members, targetSongCount }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAvailableOnly, setFilterAvailableOnly] = useState(false);
-
-  const completedCount = songs.filter(s => s.isCompleted).length;
+  const [filterCompletedOnly, setFilterCompletedOnly] = useState(false);
 
   const publicSongs = songs.filter(song => {
     if (song.isDropped) return false;
     
+    if (filterCompletedOnly && !song.isCompleted) {
+      return false;
+    }
+
     if (filterAvailableOnly) {
       if (song.isCompleted || calculateUnassignedSessions(song.sessions) === 0) {
         return false;
@@ -731,27 +760,30 @@ function PublicPage({ songs, members, targetSongCount }) {
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto font-sans space-y-6">
-      <div className="flex justify-between items-center pb-4 border-b">
-        <div>
-          {/* 수정 요구사항: 상단 제목 변경 */}
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900">🔥불꽃: 2026 2정공 곡회의🔥</h1>
-          <p className="text-xs text-gray-500 mt-1">실시간 현황 및 세션 모집 안내</p>
+      {/* 고정 상단 영역 (Sticky Header) */}
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm pt-2 pb-4 space-y-4 border-b">
+        <div className="flex justify-between items-center">
+          <div>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900">🔥불꽃: 2026 2정공 곡회의🔥</h1>
+          </div>
+          <Link 
+            to="/admin" 
+            className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg border font-medium transition"
+          >
+            관리자 페이지
+          </Link>
         </div>
-        <Link 
-          to="/admin" 
-          className="text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded-lg border font-medium transition"
-        >
-          관리자 페이지
-        </Link>
-      </div>
 
-      <ProgressBarStatus completedCount={completedCount} targetSongCount={targetSongCount} />
+        <ProgressBarStatus songs={songs} targetSongCount={targetSongCount} />
+      </div>
 
       <SongFilterBar 
         searchTerm={searchTerm} 
         setSearchTerm={setSearchTerm} 
         filterAvailableOnly={filterAvailableOnly} 
         setFilterAvailableOnly={setFilterAvailableOnly} 
+        filterCompletedOnly={filterCompletedOnly}
+        setFilterCompletedOnly={setFilterCompletedOnly}
       />
 
       <SongListView songs={publicSongs} members={members} />
@@ -772,6 +804,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
   // 검색 및 필터 상태
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAvailableOnly, setFilterAvailableOnly] = useState(false);
+  const [filterCompletedOnly, setFilterCompletedOnly] = useState(false);
 
   // 미완성 곡 일괄 제거 대상
   const [selectedMemberToRemove, setSelectedMemberToRemove] = useState('');
@@ -1048,9 +1081,11 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
     );
   }
 
-  const completedCount = songs.filter(s => s.isCompleted).length;
-
   const filteredSongs = songs.filter(song => {
+    if (filterCompletedOnly && !song.isCompleted) {
+      return false;
+    }
+
     if (filterAvailableOnly) {
       if (song.isCompleted || song.isDropped || calculateUnassignedSessions(song.sessions) === 0) {
         return false;
@@ -1086,34 +1121,37 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto font-sans space-y-6">
-      <div className="flex justify-between items-center pb-4 border-b">
-        <div>
-          <div className="flex items-center gap-2">
-            <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-              currentUser.isSuperAdmin ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'
-            }`}>
-              {currentUser.name} ({currentUser.id})
-            </span>
+      {/* 고정 상단 영역 (Sticky Header) */}
+      <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm pt-2 pb-4 space-y-4 border-b">
+        <div className="flex justify-between items-center">
+          <div>
+            <div className="flex items-center gap-2">
+              <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
+                currentUser.isSuperAdmin ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'
+              }`}>
+                {currentUser.name} ({currentUser.id})
+              </span>
+            </div>
+            <h1 className="text-xl md:text-2xl font-bold text-gray-900 mt-1">곡회의 관리자 센터</h1>
           </div>
-          <h1 className="text-xl md:text-2xl font-bold text-gray-900 mt-1">곡회의 관리자 센터</h1>
+          <div className="flex items-center gap-2">
+            <button 
+              onClick={handleLogout} 
+              className="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg transition font-medium"
+            >
+              로그아웃
+            </button>
+            <button 
+              onClick={() => navigate('/')} 
+              className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1.5 rounded-lg transition font-medium"
+            >
+              학회원 화면
+            </button>
+          </div>
         </div>
-        <div className="flex items-center gap-2">
-          <button 
-            onClick={handleLogout} 
-            className="text-xs bg-red-50 hover:bg-red-100 text-red-600 border border-red-200 px-3 py-1.5 rounded-lg transition font-medium"
-          >
-            로그아웃
-          </button>
-          <button 
-            onClick={() => navigate('/')} 
-            className="text-xs bg-gray-200 hover:bg-gray-300 text-gray-800 px-3 py-1.5 rounded-lg transition font-medium"
-          >
-            학회원 화면
-          </button>
-        </div>
-      </div>
 
-      <ProgressBarStatus completedCount={completedCount} targetSongCount={targetSongCount} />
+        <ProgressBarStatus songs={songs} targetSongCount={targetSongCount} />
+      </div>
 
       <div className="flex border-b overflow-x-auto">
         <button 
@@ -1177,7 +1215,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
           <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl space-y-2">
             <div className="text-xs font-bold text-amber-900 flex items-center gap-1">
               <span>🧹</span>
-              <span>미완성 곡에서 특정 학회원 일괄 제거 (곡 제한 도달 시 활용)</span>
+              <span>학회원 일괄 제거 (미완성 곡 한정)</span>
             </div>
             <div className="flex flex-wrap items-center gap-2">
               <select 
@@ -1199,7 +1237,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
                 미완성 곡에서 일괄 제거
               </button>
               <span className="text-[11px] text-amber-700 italic">
-                * '완성' 및 '짤' 상태인 곡은 제휴/유지되며, 아직 완성되지 않은 곡에서만 이름이 삭제됩니다.
+                * '완성' 및 '짤' 상태인 곡은 유지되며, 아직 완성되지 않은 곡에서만 이름이 삭제됩니다.
               </span>
             </div>
           </div>
@@ -1222,6 +1260,8 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
             setSearchTerm={setSearchTerm} 
             filterAvailableOnly={filterAvailableOnly} 
             setFilterAvailableOnly={setFilterAvailableOnly} 
+            filterCompletedOnly={filterCompletedOnly}
+            setFilterCompletedOnly={setFilterCompletedOnly}
           />
 
           <SongListView 
