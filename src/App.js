@@ -368,7 +368,7 @@ function SongListView({ songs, members, showAdminActions = false, onEditSong, on
   );
 }
 
-// --- [관리자] 곡 세션 및 인원 수정 모달 (실시간 자동 저장 및 상태 반영) ---
+// --- [관리자] 곡 세션 및 인원 수정 모달 (실시간 즉시 반영) ---
 function EditSongModal({ song, members, currentUser, onClose }) {
   const [title, setTitle] = useState(song.title || '');
   const [artist, setArtist] = useState(song.artist || '');
@@ -383,126 +383,169 @@ function EditSongModal({ song, members, currentUser, onClose }) {
 
   // 실시간 저장 상태 ('saved' | 'saving')
   const [saveStatus, setSaveStatus] = useState('saved');
-  const isFirstRender = useRef(true);
 
-// ★ 실시간 자동 저장 및 Firebase Sync
-  useEffect(() => {
-    // 최초 모달 열릴 때는 저장 실행 방지
-    if (isFirstRender.current) {
-      isFirstRender.current = false;
-      return;
-    }
-
+  // Firebase에 변경 사항을 즉시 반영하는 헬퍼 함수
+  const saveToFirebase = (updatedFields) => {
     setSaveStatus('saving');
+    
+    // 현재 state와 새로 변경된 단일 필드를 병합
+    const nextData = {
+      title,
+      artist,
+      isCompleted,
+      isDropped,
+      sessions,
+      ...updatedFields
+    };
 
-    const updates = {};
-    const logDetails = [];
+    const updates = {
+      [`songs/${song.id}/title`]: nextData.title,
+      [`songs/${song.id}/artist`]: nextData.artist,
+      [`songs/${song.id}/isCompleted`]: nextData.isCompleted,
+      [`songs/${song.id}/isDropped`]: nextData.isDropped,
+      [`songs/${song.id}/sessions`]: nextData.sessions
+    };
 
-    if (title !== song.title) {
-      updates[`songs/${song.id}/title`] = title;
-      logDetails.push(`곡명 변경: '${song.title}' -> '${title}'`);
-    }
-    if (artist !== song.artist) {
-      updates[`songs/${song.id}/artist`] = artist;
-      logDetails.push(`가수 변경: '${song.artist}' -> '${artist}'`);
-    }
-    if (isCompleted !== song.isCompleted) {
-      updates[`songs/${song.id}/isCompleted`] = isCompleted;
-      logDetails.push(`'완성' 상태 ${isCompleted ? '설정' : '해제'}`);
-    }
-    if (isDropped !== song.isDropped) {
-      updates[`songs/${song.id}/isDropped`] = isDropped;
-      logDetails.push(`'짤' 상태 ${isDropped ? '설정' : '해제'}`);
-    }
+    update(ref(db), updates)
+      .then(() => {
+        setSaveStatus('saved');
+      })
+      .catch(err => {
+        console.error("실시간 업데이트 실패:", err);
+        setSaveStatus('saved');
+      });
+  };
 
-    updates[`songs/${song.id}/sessions`] = sessions;
+  // 1. 곡명 변경 시 즉시 반영
+  const handleTitleChange = (val) => {
+    setTitle(val);
+    saveToFirebase({ title: val });
+  };
 
-    // 디바운싱(연속 클릭 시 마지막 변경사항만 최종 처리)
-    const timer = setTimeout(() => {
-      update(ref(db), updates)
-        .then(() => {
-          if (logDetails.length > 0) {
-            logActivity(currentUser, `[${song.title} - ${song.artist}] 수정: ${logDetails.join(' / ')}`);
-          }
-          setSaveStatus('saved');
-        })
-        .catch(err => {
-          console.error("자동 저장 실패:", err);
-          setSaveStatus('saved');
-        });
-    }, 300);
+  // 2. 가수 변경 시 즉시 반영
+  const handleArtistChange = (val) => {
+    setArtist(val);
+    saveToFirebase({ artist: val });
+  };
 
-    return () => clearTimeout(timer);
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [title, artist, isCompleted, isDropped, sessions]);
+  // 3. 완성 여부 변경 시 즉시 반영
+  const handleCompletedToggle = (checked) => {
+    setIsCompleted(checked);
+    const newDropped = checked ? false : isDropped;
+    if (checked) setIsDropped(false);
+    saveToFirebase({ isCompleted: checked, isDropped: newDropped });
+  };
 
+  // 4. 짤 여부 변경 시 즉시 반영
+  const handleDroppedToggle = (checked) => {
+    setIsDropped(checked);
+    const newCompleted = checked ? false : isCompleted;
+    if (checked) setIsCompleted(false);
+    saveToFirebase({ isDropped: checked, isCompleted: newCompleted });
+  };
+
+  // 5. 세션 추가 시 즉시 반영
   const addSession = () => {
-    setSessions(prev => [...prev, {
+    const nextSessions = [...sessions, {
       sessionName: '보컬',
       detailName: '',
       difficulty: '',
       requiredCount: 1,
       assignedMembers: {}
-    }]);
+    }];
+    setSessions(nextSessions);
+    saveToFirebase({ sessions: nextSessions });
   };
 
+  // 6. 세션 삭제 시 즉시 반영
   const removeSession = (index) => {
-    setSessions(prev => prev.filter((_, i) => i !== index));
+    const nextSessions = sessions.filter((_, i) => i !== index);
+    setSessions(nextSessions);
+    saveToFirebase({ sessions: nextSessions });
   };
 
+  // 7. 세션 기본 정보(이름, 세부명, 난이도) 변경 시 즉시 반영
   const updateSession = (index, field, value) => {
-    setSessions(prev => {
-      const updated = [...prev];
-      updated[index][field] = value;
-      return updated;
+    const nextSessions = sessions.map((s, i) => {
+      if (i === index) return { ...s, [field]: value };
+      return s;
     });
+    setSessions(nextSessions);
+    saveToFirebase({ sessions: nextSessions });
   };
 
+  // 8. 학회원 선택/해제 시 즉시 반영
   const toggleMemberInSession = (sessionIndex, memberId) => {
-    setSessions(prev => {
-      const updated = [...prev];
-      const currentMap = { ...(updated[sessionIndex].assignedMembers || {}) };
-      
-      if (currentMap[memberId]) {
-        delete currentMap[memberId];
-      } else {
-        currentMap[memberId] = { rank: '', isRequester: false, isPending: false };
+    const nextSessions = sessions.map((s, i) => {
+      if (i === sessionIndex) {
+        const currentMap = { ...(s.assignedMembers || {}) };
+        if (currentMap[memberId]) {
+          delete currentMap[memberId];
+        } else {
+          currentMap[memberId] = { rank: '', isRequester: false, isPending: false };
+        }
+        return { ...s, assignedMembers: currentMap };
       }
-      updated[sessionIndex].assignedMembers = currentMap;
-      return updated;
+      return s;
     });
+    setSessions(nextSessions);
+    saveToFirebase({ sessions: nextSessions });
   };
 
+  // 9. 순위 변경 시 즉시 반영
   const updateMemberRank = (sessionIndex, memberId, rankValue) => {
-    setSessions(prev => {
-      const updated = [...prev];
-      if (updated[sessionIndex].assignedMembers[memberId]) {
-        updated[sessionIndex].assignedMembers[memberId].rank = rankValue;
+    const nextSessions = sessions.map((s, i) => {
+      if (i === sessionIndex && s.assignedMembers[memberId]) {
+        return {
+          ...s,
+          assignedMembers: {
+            ...s.assignedMembers,
+            [memberId]: { ...s.assignedMembers[memberId], rank: rankValue }
+          }
+        };
       }
-      return updated;
+      return s;
     });
+    setSessions(nextSessions);
+    saveToFirebase({ sessions: nextSessions });
   };
 
+  // 10. 신청자(★) 토글 시 즉시 반영
   const toggleRequester = (sessionIndex, memberId) => {
-    setSessions(prev => {
-      const updated = [...prev];
-      if (updated[sessionIndex].assignedMembers[memberId]) {
-        const currentVal = updated[sessionIndex].assignedMembers[memberId].isRequester;
-        updated[sessionIndex].assignedMembers[memberId].isRequester = !currentVal;
+    const nextSessions = sessions.map((s, i) => {
+      if (i === sessionIndex && s.assignedMembers[memberId]) {
+        const currentVal = s.assignedMembers[memberId].isRequester;
+        return {
+          ...s,
+          assignedMembers: {
+            ...s.assignedMembers,
+            [memberId]: { ...s.assignedMembers[memberId], isRequester: !currentVal }
+          }
+        };
       }
-      return updated;
+      return s;
     });
+    setSessions(nextSessions);
+    saveToFirebase({ sessions: nextSessions });
   };
 
+  // 11. 보류 토글 시 즉시 반영
   const togglePending = (sessionIndex, memberId) => {
-    setSessions(prev => {
-      const updated = [...prev];
-      if (updated[sessionIndex].assignedMembers[memberId]) {
-        const currentVal = updated[sessionIndex].assignedMembers[memberId].isPending;
-        updated[sessionIndex].assignedMembers[memberId].isPending = !currentVal;
+    const nextSessions = sessions.map((s, i) => {
+      if (i === sessionIndex && s.assignedMembers[memberId]) {
+        const currentVal = s.assignedMembers[memberId].isPending;
+        return {
+          ...s,
+          assignedMembers: {
+            ...s.assignedMembers,
+            [memberId]: { ...s.assignedMembers[memberId], isPending: !currentVal }
+          }
+        };
       }
-      return updated;
+      return s;
     });
+    setSessions(nextSessions);
+    saveToFirebase({ sessions: nextSessions });
   };
 
   const getFilteredMembersForSession = (sessionIndex, sessionName) => {
@@ -552,11 +595,11 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden shadow-2xl">
         
-        {/* === [상단 고정 헤더 영역 - 실시간 저장 상태 반영] === */}
+        {/* 상단 고정 헤더 */}
         <div className="p-5 border-b bg-white space-y-4 shrink-0 shadow-sm z-10">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
-              <h2 className="text-lg font-bold text-gray-900">곡 세션 및 인원 상세 수정</h2>
+              <h2 className="text-lg font-bold text-gray-900">곡 세션 및 인원 수정</h2>
               <span className={`text-xs font-bold transition-all duration-200 ${
                 saveStatus === 'saving' ? 'text-amber-500 animate-pulse' : 'text-emerald-600'
               }`}>
@@ -577,7 +620,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
               <input 
                 type="text" 
                 value={title} 
-                onChange={e => setTitle(e.target.value)} 
+                onChange={e => handleTitleChange(e.target.value)} 
                 className="w-full border p-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -586,7 +629,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
               <input 
                 type="text" 
                 value={artist} 
-                onChange={e => setArtist(e.target.value)} 
+                onChange={e => handleArtistChange(e.target.value)} 
                 className="w-full border p-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
@@ -602,10 +645,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
                 <input 
                   type="checkbox" 
                   checked={isCompleted} 
-                  onChange={e => {
-                    setIsCompleted(e.target.checked);
-                    if (e.target.checked) setIsDropped(false);
-                  }}
+                  onChange={e => handleCompletedToggle(e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 relative"></div>
@@ -621,10 +661,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
                 <input 
                   type="checkbox" 
                   checked={isDropped} 
-                  onChange={e => {
-                    setIsDropped(e.target.checked);
-                    if (e.target.checked) setIsCompleted(false);
-                  }}
+                  onChange={e => handleDroppedToggle(e.target.checked)}
                   className="sr-only peer"
                 />
                 <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600 relative"></div>
@@ -633,7 +670,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
           </div>
         </div>
 
-        {/* === [독립 스크롤 세션 목록 영역] === */}
+        {/* 세션 목록 스크롤 영역 */}
         <div className="p-5 overflow-y-auto space-y-3 flex-1 bg-gray-50/50">
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-sm text-gray-800">세션 설정 (★: 신청자, [보류]: 보류)</h3>
