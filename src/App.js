@@ -173,7 +173,7 @@ function SongFilterBar({ searchTerm, setSearchTerm, filterAvailableOnly, setFilt
           placeholder="곡명, 가수, 학회원 이름 검색..." 
           value={searchTerm}
           onChange={e => setSearchTerm(e.target.value)}
-          className="w-full border p-2 pl-8 text-xs rounded-lg focus:outline-none focus:ring-2 focus:ring-[#fd9080]"
+          className="w-full border p-2 pl-8 text-xs rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
         />
         <span className="absolute left-2.5 top-2.5 text-xs text-gray-400">🔍</span>
       </div>
@@ -200,7 +200,7 @@ function SongFilterBar({ searchTerm, setSearchTerm, filterAvailableOnly, setFilt
               setFilterAvailableOnly(e.target.checked);
               if (e.target.checked) setFilterCompletedOnly(false);
             }}
-            className="rounded text-[#fd9080] focus:ring-0 w-4 h-4 cursor-pointer"
+            className="rounded text-emerald-600 focus:ring-0 w-4 h-4 cursor-pointer"
           />
           <span>⚡ 잔여</span>
         </label>
@@ -219,11 +219,11 @@ function SongListView({ songs, members, showAdminActions = false, onEditSong, on
       <div className="hidden md:block overflow-x-auto border rounded-lg shadow-sm bg-white">
         <table className="w-full text-left border-collapse">
           <thead>
-            <tr className="bg-[#fd9080] text-white text-sm">
-              <th className="p-3 w-28 text-center border-r border-orange-200/40">잔여 인원</th>
-              <th className="p-3 w-64 border-r border-orange-200/40">곡명 - 가수</th>
+            <tr className="bg-emerald-600 text-white text-sm">
+              <th className="p-3 w-28 text-center border-r border-emerald-500">잔여 인원</th>
+              <th className="p-3 w-64 border-r border-emerald-500">곡명 - 가수</th>
               <th className="p-3">신청 현황</th>
-              {showAdminActions && <th className="p-3 w-40 text-center border-l border-orange-200/40">관리</th>}
+              {showAdminActions && <th className="p-3 w-40 text-center border-l border-emerald-500">관리</th>}
             </tr>
           </thead>
           <tbody>
@@ -334,7 +334,7 @@ function SongListView({ songs, members, showAdminActions = false, onEditSong, on
                 <div className="space-y-2 text-xs">
                   {song.sessions && Object.values(song.sessions).map((session, idx) => (
                     <div key={idx} className="bg-gray-50 p-2 rounded-lg">
-                      <div className="font-semibold text-[#fd9080] mb-0.5">
+                      <div className="font-semibold text-emerald-700 mb-0.5">
                         {formatSessionLabel(session)}
                       </div>
                       <div className="text-gray-700">
@@ -593,7 +593,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
             <h3 className="font-bold text-sm text-gray-800">세션 설정 (★: 신청자, [보류]: 보류)</h3>
             <button 
               onClick={addSession} 
-              className="text-xs bg-[#fd9080] text-white px-2.5 py-1 rounded hover:bg-[#e87f70]"
+              className="text-xs bg-emerald-600 text-white px-2.5 py-1 rounded hover:bg-emerald-700"
             >
               + 세션 추가
             </button>
@@ -660,14 +660,14 @@ function EditSongModal({ song, members, currentUser, onClose }) {
 
                         return (
                           <div key={mId} className={`flex items-center gap-1.5 text-xs p-1 rounded border ${
-                            isChecked ? 'bg-orange-50 border-[#fd9080] font-bold' : 'bg-gray-50 border-gray-200'
+                            isChecked ? 'bg-emerald-50 border-emerald-500 font-bold' : 'bg-gray-50 border-gray-200'
                           }`}>
                             <label className="inline-flex items-center gap-1 cursor-pointer">
                               <input 
                                 type="checkbox" 
                                 checked={isChecked}
                                 onChange={() => toggleMemberInSession(sIdx, mId)}
-                                className="rounded text-[#fd9080] focus:ring-0"
+                                className="rounded text-emerald-600 focus:ring-0"
                               />
                               {m.name}({m.generation}기)
                             </label>
@@ -715,7 +715,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
 
         <div className="flex justify-end gap-2 pt-3 border-t">
           <button onClick={onClose} className="px-4 py-1.5 text-xs bg-gray-200 rounded">취소</button>
-          <button onClick={handleSave} className="px-4 py-1.5 text-xs bg-[#fd9080] text-white rounded font-bold hover:bg-[#e87f70]">저장하기</button>
+          <button onClick={handleSave} className="px-4 py-1.5 text-xs bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700">저장하기</button>
         </div>
       </div>
     </div>
@@ -1035,7 +1035,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
       <div className="min-h-screen flex items-center justify-center bg-gray-50 p-4 font-sans">
         <form onSubmit={handleLogin} className="bg-white p-6 rounded-xl border shadow-sm max-w-sm w-full space-y-4">
           <div className="text-center">
-            <span className="bg-orange-100 text-[#fd9080] text-xs px-2.5 py-0.5 rounded-full font-bold">관리자 인증</span>
+            <span className="bg-emerald-100 text-emerald-800 text-xs px-2.5 py-0.5 rounded-full font-bold">관리자 인증</span>
             <h2 className="text-lg font-bold text-gray-800 mt-1">관리자 로그인</h2>
           </div>
           <div className="space-y-3">
@@ -1046,7 +1046,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
                 placeholder="아이디"
                 value={usernameInput}
                 onChange={e => setUsernameInput(e.target.value)}
-                className="w-full border p-2 text-sm rounded focus:outline-none focus:ring-2 focus:ring-[#fd9080]"
+                className="w-full border p-2 text-sm rounded focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
             <div>
@@ -1056,7 +1056,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
                 placeholder="비밀번호"
                 value={passwordInput}
                 onChange={e => setPasswordInput(e.target.value)}
-                className="w-full border p-2 text-sm rounded focus:outline-none focus:ring-2 focus:ring-[#fd9080]"
+                className="w-full border p-2 text-sm rounded focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
             </div>
           </div>
@@ -1070,7 +1070,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
             </button>
             <button 
               type="submit" 
-              className="w-1/2 bg-[#fd9080] text-white py-2 rounded text-xs font-bold hover:bg-[#e87f70]"
+              className="w-1/2 bg-emerald-600 text-white py-2 rounded text-xs font-bold hover:bg-emerald-700"
             >
               로그인
             </button>
@@ -1126,7 +1126,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
           <div className="text-center">
             <div className="flex items-center justify-center gap-2">
               <span className={`text-xs px-2.5 py-0.5 rounded-full font-bold ${
-                currentUser.isSuperAdmin ? 'bg-red-100 text-red-800' : 'bg-orange-100 text-[#fd9080]'
+                currentUser.isSuperAdmin ? 'bg-red-100 text-red-800' : 'bg-emerald-100 text-emerald-800'
               }`}>
                 {currentUser.name} ({currentUser.id})
               </span>
@@ -1156,7 +1156,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
         <button 
           onClick={() => setActiveTab('manage')}
           className={`px-4 py-2.5 text-sm font-bold border-b-2 whitespace-nowrap transition ${
-            activeTab === 'manage' ? 'border-[#fd9080] text-[#fd9080]' : 'border-transparent text-gray-400 hover:text-gray-600'
+            activeTab === 'manage' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
           1. 곡 현황 및 세션 관리
@@ -1164,7 +1164,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
         <button 
           onClick={() => setActiveTab('add')}
           className={`px-4 py-2.5 text-sm font-bold border-b-2 whitespace-nowrap transition ${
-            activeTab === 'add' ? 'border-[#fd9080] text-[#fd9080]' : 'border-transparent text-gray-400 hover:text-gray-600'
+            activeTab === 'add' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
           2. 새 곡 추가
@@ -1172,7 +1172,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
         <button 
           onClick={() => setActiveTab('members')}
           className={`px-4 py-2.5 text-sm font-bold border-b-2 whitespace-nowrap transition ${
-            activeTab === 'members' ? 'border-[#fd9080] text-[#fd9080]' : 'border-transparent text-gray-400 hover:text-gray-600'
+            activeTab === 'members' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
           3. 학회원 명단 관리
@@ -1180,7 +1180,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
         <button 
           onClick={() => setActiveTab('settings')}
           className={`px-4 py-2.5 text-sm font-bold border-b-2 whitespace-nowrap transition ${
-            activeTab === 'settings' ? 'border-[#fd9080] text-[#fd9080]' : 'border-transparent text-gray-400 hover:text-gray-600'
+            activeTab === 'settings' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
           4. 목표 곡 수 설정
@@ -1246,7 +1246,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
             </span>
             <button 
               onClick={handleExecuteSort}
-              className="px-3.5 py-1.5 rounded text-xs font-bold transition bg-[#fd9080] hover:bg-[#e87f70] text-white shadow-sm flex items-center gap-1.5"
+              className="px-3.5 py-1.5 rounded text-xs font-bold transition bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm flex items-center gap-1.5"
             >
               <span>↕</span>
               <span>정렬 순서 즉시 적용하기</span>
@@ -1273,7 +1273,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
       )}
 
       {activeTab === 'add' && (
-        <div className="max-w-2xl bg-orange-50/50 p-6 rounded-xl border border-orange-200 space-y-4">
+        <div className="max-w-2xl bg-emerald-50/50 p-6 rounded-xl border border-emerald-200 space-y-4">
           <h2 className="font-bold text-gray-900 text-base">새 곡 추가하기</h2>
           <form onSubmit={handleAddSong} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -1300,16 +1300,16 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
               </div>
             </div>
 
-            <div className="pt-2 border-t border-orange-200">
+            <div className="pt-2 border-t border-emerald-200">
               <span className="text-xs font-bold text-gray-700 block mb-2">포함할 기본 세션 선택:</span>
-              <div className="flex flex-wrap gap-3 text-xs bg-white p-3 rounded border border-orange-200">
+              <div className="flex flex-wrap gap-3 text-xs bg-white p-3 rounded border border-emerald-200">
                 {SONG_SESSION_TYPES.map(st => (
                   <label key={st} className="inline-flex items-center gap-1.5 cursor-pointer font-medium text-gray-800">
                     <input 
                       type="checkbox" 
                       checked={!!selectedInitialSessions[st]} 
                       onChange={() => toggleInitialSession(st)}
-                      className="rounded text-[#fd9080] focus:ring-0"
+                      className="rounded text-emerald-600 focus:ring-0"
                     />
                     {st}
                   </label>
@@ -1318,7 +1318,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
             </div>
 
             <div className="pt-2 flex justify-end">
-              <button type="submit" className="bg-[#fd9080] text-white px-6 py-2 rounded text-sm font-bold hover:bg-[#e87f70]">
+              <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded text-sm font-bold hover:bg-emerald-700">
                 + 곡 추가하기
               </button>
             </div>
@@ -1416,7 +1416,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
           </div>
           <button 
             onClick={handleSaveTargetCount} 
-            className="w-full bg-[#fd9080] text-white py-2 rounded text-xs font-bold hover:bg-[#e87f70]"
+            className="w-full bg-emerald-600 text-white py-2 rounded text-xs font-bold hover:bg-emerald-700"
           >
             목표 곡 수 저장하기
           </button>
@@ -1514,7 +1514,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
                   <div key={index} className="text-xs p-2.5 bg-gray-50 rounded border flex flex-col sm:flex-row sm:items-center justify-between gap-1">
                     <div className="flex items-center gap-2">
                       <span className="font-mono text-gray-400">{log.timestamp}</span>
-                      <span className="font-bold text-gray-800 bg-orange-100 px-2 py-0.5 rounded">
+                      <span className="font-bold text-gray-800 bg-emerald-100 px-2 py-0.5 rounded">
                         {log.adminName}({log.adminId})
                       </span>
                     </div>
