@@ -368,7 +368,7 @@ function SongListView({ songs, members, showAdminActions = false, onEditSong, on
   );
 }
 
-// --- [관리자] 곡 세션 및 인원 수정 모달 ---
+// --- [관리자] 곡 세션 및 인원 수정 모달 (상단 고정 개선 적용) ---
 function EditSongModal({ song, members, currentUser, onClose }) {
   const [title, setTitle] = useState(song.title || '');
   const [artist, setArtist] = useState(song.artist || '');
@@ -520,80 +520,101 @@ function EditSongModal({ song, members, currentUser, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 overflow-y-auto">
-      <div className="bg-white rounded-xl max-w-2xl w-full p-6 space-y-4 max-h-[90vh] overflow-y-auto">
-        <div className="flex justify-between items-center border-b pb-3">
-          <h2 className="text-xl font-bold">곡 세션 및 인원 상세 수정</h2>
-          <button onClick={onClose} className="text-gray-400 hover:text-gray-600 font-bold">✕</button>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div>
-            <label className="text-xs font-bold text-gray-600 block mb-1">곡명</label>
-            <input 
-              type="text" 
-              value={title} 
-              onChange={e => setTitle(e.target.value)} 
-              className="w-full border p-2 text-sm rounded"
-            />
-          </div>
-          <div>
-            <label className="text-xs font-bold text-gray-600 block mb-1">가수</label>
-            <input 
-              type="text" 
-              value={artist} 
-              onChange={e => setArtist(e.target.value)} 
-              className="w-full border p-2 text-sm rounded"
-            />
-          </div>
-        </div>
-
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <div className="bg-blue-50 p-3 rounded-lg border border-blue-200 flex items-center justify-between">
-            <div>
-              <span className="text-sm font-bold text-blue-900 block">곡 "완성" 설정</span>
-              <span className="text-xs text-blue-600">완성 시 파란색 배지 및 게이지 바에 반영</span>
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
+      <div className="bg-white rounded-xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden shadow-2xl">
+        
+        {/* === [상단 고정 헤더 영역] === */}
+        <div className="p-5 border-b bg-white space-y-4 shrink-0 shadow-sm z-10">
+          {/* 헤더 제목 & 우측 취소/저장 버튼 */}
+          <div className="flex justify-between items-center">
+            <h2 className="text-lg font-bold text-gray-900">곡 세션 및 인원 상세 수정</h2>
+            <div className="flex gap-2">
+              <button 
+                onClick={onClose} 
+                className="px-3.5 py-1.5 text-xs bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg font-bold transition"
+              >
+                취소
+              </button>
+              <button 
+                onClick={handleSave} 
+                className="px-3.5 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition shadow-sm"
+              >
+                저장하기
+              </button>
             </div>
-            <label className="inline-flex items-center cursor-pointer">
-              <input 
-                type="checkbox" 
-                checked={isCompleted} 
-                onChange={e => {
-                  setIsCompleted(e.target.checked);
-                  if (e.target.checked) setIsDropped(false);
-                }}
-                className="sr-only peer"
-              />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600 relative"></div>
-            </label>
           </div>
 
-          <div className="bg-red-50 p-3 rounded-lg border border-red-200 flex items-center justify-between">
+          {/* 곡명 및 가수 입력란 */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
-              <span className="text-sm font-bold text-red-900 block">곡 "짤" 설정</span>
-              <span className="text-xs text-red-600">짤 설정 시 학회원 페이지에서 숨김 처리됨</span>
-            </div>
-            <label className="inline-flex items-center cursor-pointer">
+              <label className="text-xs font-bold text-gray-600 block mb-1">곡명</label>
               <input 
-                type="checkbox" 
-                checked={isDropped} 
-                onChange={e => {
-                  setIsDropped(e.target.checked);
-                  if (e.target.checked) setIsCompleted(false);
-                }}
-                className="sr-only peer"
+                type="text" 
+                value={title} 
+                onChange={e => setTitle(e.target.value)} 
+                className="w-full border p-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
               />
-              <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-red-600 relative"></div>
-            </label>
+            </div>
+            <div>
+              <label className="text-xs font-bold text-gray-600 block mb-1">가수</label>
+              <input 
+                type="text" 
+                value={artist} 
+                onChange={e => setArtist(e.target.value)} 
+                className="w-full border p-2 text-sm rounded-lg focus:outline-none focus:ring-2 focus:ring-emerald-500"
+              />
+            </div>
+          </div>
+
+          {/* 곡 상태 설정 (완성/짤) */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div className="bg-blue-50/70 p-2.5 rounded-lg border border-blue-200 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-blue-900 block">곡 "완성" 설정</span>
+                <span className="text-[11px] text-blue-600">완성 시 파란색 배지 반영</span>
+              </div>
+              <label className="inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={isCompleted} 
+                  onChange={e => {
+                    setIsCompleted(e.target.checked);
+                    if (e.target.checked) setIsDropped(false);
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-blue-600 relative"></div>
+              </label>
+            </div>
+
+            <div className="bg-red-50/70 p-2.5 rounded-lg border border-red-200 flex items-center justify-between">
+              <div>
+                <span className="text-xs font-bold text-red-900 block">곡 "짤" 설정</span>
+                <span className="text-[11px] text-red-600">학회원 페이지에서 숨김</span>
+              </div>
+              <label className="inline-flex items-center cursor-pointer">
+                <input 
+                  type="checkbox" 
+                  checked={isDropped} 
+                  onChange={e => {
+                    setIsDropped(e.target.checked);
+                    if (e.target.checked) setIsCompleted(false);
+                  }}
+                  className="sr-only peer"
+                />
+                <div className="w-9 h-5 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-red-600 relative"></div>
+              </label>
+            </div>
           </div>
         </div>
 
-        <div className="space-y-3">
+        {/* === [독립 스크롤 세션 목록 영역] === */}
+        <div className="p-5 overflow-y-auto space-y-3 flex-1 bg-gray-50/50">
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-sm text-gray-800">세션 설정 (★: 신청자, [보류]: 보류)</h3>
             <button 
               onClick={addSession} 
-              className="text-xs bg-emerald-600 text-white px-2.5 py-1 rounded hover:bg-emerald-700"
+              className="text-xs bg-emerald-600 text-white px-2.5 py-1 rounded hover:bg-emerald-700 font-bold"
             >
               + 세션 추가
             </button>
@@ -605,7 +626,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
             const showDifficulty = session.sessionName !== '보컬';
 
             return (
-              <div key={sIdx} className="border p-3 rounded-lg bg-gray-50 space-y-2">
+              <div key={sIdx} className="border p-3 rounded-lg bg-white shadow-sm space-y-2">
                 <div className="flex flex-wrap items-center gap-2">
                   <select 
                     value={session.sessionName} 
@@ -637,7 +658,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
 
                   <button 
                     onClick={() => removeSession(sIdx)} 
-                    className="ml-auto text-xs text-red-600 hover:underline"
+                    className="ml-auto text-xs text-red-600 hover:underline font-bold"
                   >
                     삭제
                   </button>
@@ -647,7 +668,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
                   <span className="text-xs font-bold text-gray-800 block mb-1">
                     [{session.sessionName}] 학회원 선택:
                   </span>
-                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto bg-white p-2 border rounded">
+                  <div className="flex flex-wrap gap-2 max-h-36 overflow-y-auto bg-gray-50 p-2 border rounded">
                     {eligibleMembers.length === 0 ? (
                       <span className="text-xs text-gray-400">해당 세션 학회원이 없습니다.</span>
                     ) : (
@@ -660,7 +681,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
 
                         return (
                           <div key={mId} className={`flex items-center gap-1.5 text-xs p-1 rounded border ${
-                            isChecked ? 'bg-emerald-50 border-emerald-500 font-bold' : 'bg-gray-50 border-gray-200'
+                            isChecked ? 'bg-emerald-50 border-emerald-500 font-bold' : 'bg-white border-gray-200'
                           }`}>
                             <label className="inline-flex items-center gap-1 cursor-pointer">
                               <input 
@@ -711,11 +732,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
               </div>
             );
           })}
-        </div>
-
-        <div className="flex justify-end gap-2 pt-3 border-t">
-          <button onClick={onClose} className="px-4 py-1.5 text-xs bg-gray-200 rounded">취소</button>
-          <button onClick={handleSave} className="px-4 py-1.5 text-xs bg-emerald-600 text-white rounded font-bold hover:bg-emerald-700">저장하기</button>
         </div>
       </div>
     </div>
@@ -852,7 +868,6 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
     setPasswordInput('');
   };
 
-  // 신규 제안 기능: 특정 학회원 미완성(완성/짤 제외) 곡 일괄 제거
   const handleRemoveMemberFromUncompletedSongs = () => {
     if (!selectedMemberToRemove) {
       alert("제거할 학회원을 선택해주세요.");
