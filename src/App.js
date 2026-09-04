@@ -368,7 +368,7 @@ function SongListView({ songs, members, showAdminActions = false, onEditSong, on
   );
 }
 
-// --- [관리자] 곡 세션 및 인원 수정 모달 (실시간 즉시 반영) ---
+// --- [관리자] 곡 세션 및 인원 수정 모달 (다중 관리자 동시 수정 실시간 반영) ---
 function EditSongModal({ song, members, currentUser, onClose }) {
   const [title, setTitle] = useState(song.title || '');
   const [artist, setArtist] = useState(song.artist || '');
@@ -381,14 +381,34 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     })) : []
   );
 
-  // 실시간 저장 상태 ('saved' | 'saving')
   const [saveStatus, setSaveStatus] = useState('saved');
+
+  // ★ 다중 접속 실시간 동기화: DB에서 해당 곡 데이터가 변경되면 모달 State 자동 갱신
+  useEffect(() => {
+    const songRef = ref(db, `songs/${song.id}`);
+    const unsubscribe = onValue(songRef, (snapshot) => {
+      const liveData = snapshot.val();
+      if (liveData) {
+        setTitle(liveData.title || '');
+        setArtist(liveData.artist || '');
+        setIsCompleted(liveData.isCompleted || false);
+        setIsDropped(liveData.isDropped || false);
+        setSessions(
+          liveData.sessions ? Object.values(liveData.sessions).map(s => ({
+            ...s,
+            assignedMembers: s.assignedMembers || {}
+          })) : []
+        );
+      }
+    });
+
+    return () => unsubscribe();
+  }, [song.id]);
 
   // Firebase에 변경 사항을 즉시 반영하는 헬퍼 함수
   const saveToFirebase = (updatedFields) => {
     setSaveStatus('saving');
     
-    // 현재 state와 새로 변경된 단일 필드를 병합
     const nextData = {
       title,
       artist,
@@ -416,19 +436,19 @@ function EditSongModal({ song, members, currentUser, onClose }) {
       });
   };
 
-  // 1. 곡명 변경 시 즉시 반영
+  // 1. 곡명 변경 시
   const handleTitleChange = (val) => {
     setTitle(val);
     saveToFirebase({ title: val });
   };
 
-  // 2. 가수 변경 시 즉시 반영
+  // 2. 가수 변경 시
   const handleArtistChange = (val) => {
     setArtist(val);
     saveToFirebase({ artist: val });
   };
 
-  // 3. 완성 여부 변경 시 즉시 반영
+  // 3. 완성 여부 변경 시
   const handleCompletedToggle = (checked) => {
     setIsCompleted(checked);
     const newDropped = checked ? false : isDropped;
@@ -436,7 +456,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ isCompleted: checked, isDropped: newDropped });
   };
 
-  // 4. 짤 여부 변경 시 즉시 반영
+  // 4. 짤 여부 변경 시
   const handleDroppedToggle = (checked) => {
     setIsDropped(checked);
     const newCompleted = checked ? false : isCompleted;
@@ -444,7 +464,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ isDropped: checked, isCompleted: newCompleted });
   };
 
-  // 5. 세션 추가 시 즉시 반영
+  // 5. 세션 추가 시
   const addSession = () => {
     const nextSessions = [...sessions, {
       sessionName: '보컬',
@@ -457,14 +477,14 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 6. 세션 삭제 시 즉시 반영
+  // 6. 세션 삭제 시
   const removeSession = (index) => {
     const nextSessions = sessions.filter((_, i) => i !== index);
     setSessions(nextSessions);
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 7. 세션 기본 정보(이름, 세부명, 난이도) 변경 시 즉시 반영
+  // 7. 세션 기본 정보 변경 시
   const updateSession = (index, field, value) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === index) return { ...s, [field]: value };
@@ -474,7 +494,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 8. 학회원 선택/해제 시 즉시 반영
+  // 8. 학회원 선택/해제 시
   const toggleMemberInSession = (sessionIndex, memberId) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === sessionIndex) {
@@ -492,7 +512,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 9. 순위 변경 시 즉시 반영
+  // 9. 순위 변경 시
   const updateMemberRank = (sessionIndex, memberId, rankValue) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === sessionIndex && s.assignedMembers[memberId]) {
@@ -510,7 +530,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 10. 신청자(★) 토글 시 즉시 반영
+  // 10. 신청자(★) 토글 시
   const toggleRequester = (sessionIndex, memberId) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === sessionIndex && s.assignedMembers[memberId]) {
@@ -529,7 +549,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 11. 보류 토글 시 즉시 반영
+  // 11. 보류 토글 시
   const togglePending = (sessionIndex, memberId) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === sessionIndex && s.assignedMembers[memberId]) {
@@ -603,7 +623,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
               <span className={`text-xs font-bold transition-all duration-200 ${
                 saveStatus === 'saving' ? 'text-amber-500 animate-pulse' : 'text-emerald-600'
               }`}>
-                {saveStatus === 'saving' ? '● 저장 중...' : '● 저장됨'}
+                {saveStatus === 'saving' ? '● 저장 중...' : '● 동기화됨'}
               </span>
             </div>
             <button 
