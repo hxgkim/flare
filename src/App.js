@@ -383,7 +383,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
 
   const [saveStatus, setSaveStatus] = useState('saved');
 
-  // ★ 다중 접속 실시간 동기화: DB에서 해당 곡 데이터가 변경되면 모달 State 자동 갱신
   useEffect(() => {
     const songRef = ref(db, `songs/${song.id}`);
     const unsubscribe = onValue(songRef, (snapshot) => {
@@ -405,7 +404,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     return () => unsubscribe();
   }, [song.id]);
 
-  // Firebase에 변경 사항을 즉시 반영하는 헬퍼 함수
   const saveToFirebase = (updatedFields) => {
     setSaveStatus('saving');
     
@@ -436,19 +434,16 @@ function EditSongModal({ song, members, currentUser, onClose }) {
       });
   };
 
-  // 1. 곡명 변경 시
   const handleTitleChange = (val) => {
     setTitle(val);
     saveToFirebase({ title: val });
   };
 
-  // 2. 가수 변경 시
   const handleArtistChange = (val) => {
     setArtist(val);
     saveToFirebase({ artist: val });
   };
 
-  // 3. 완성 여부 변경 시
   const handleCompletedToggle = (checked) => {
     setIsCompleted(checked);
     const newDropped = checked ? false : isDropped;
@@ -456,7 +451,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ isCompleted: checked, isDropped: newDropped });
   };
 
-  // 4. 짤 여부 변경 시
   const handleDroppedToggle = (checked) => {
     setIsDropped(checked);
     const newCompleted = checked ? false : isCompleted;
@@ -464,7 +458,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ isDropped: checked, isCompleted: newCompleted });
   };
 
-  // 5. 세션 추가 시
   const addSession = () => {
     const nextSessions = [...sessions, {
       sessionName: '보컬',
@@ -477,14 +470,12 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 6. 세션 삭제 시
   const removeSession = (index) => {
     const nextSessions = sessions.filter((_, i) => i !== index);
     setSessions(nextSessions);
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 7. 세션 기본 정보 변경 시
   const updateSession = (index, field, value) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === index) return { ...s, [field]: value };
@@ -494,7 +485,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 8. 학회원 선택/해제 시
   const toggleMemberInSession = (sessionIndex, memberId) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === sessionIndex) {
@@ -512,7 +502,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 9. 순위 변경 시
   const updateMemberRank = (sessionIndex, memberId, rankValue) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === sessionIndex && s.assignedMembers[memberId]) {
@@ -530,7 +519,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 10. 신청자(★) 토글 시
   const toggleRequester = (sessionIndex, memberId) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === sessionIndex && s.assignedMembers[memberId]) {
@@ -549,7 +537,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     saveToFirebase({ sessions: nextSessions });
   };
 
-  // 11. 보류 토글 시
   const togglePending = (sessionIndex, memberId) => {
     const nextSessions = sessions.map((s, i) => {
       if (i === sessionIndex && s.assignedMembers[memberId]) {
@@ -614,8 +601,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
   return (
     <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
       <div className="bg-white rounded-xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden shadow-2xl">
-        
-        {/* 상단 고정 헤더 */}
         <div className="p-5 border-b bg-white space-y-4 shrink-0 shadow-sm z-10">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
@@ -690,7 +675,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
           </div>
         </div>
 
-        {/* 세션 목록 스크롤 영역 */}
         <div className="p-5 overflow-y-auto space-y-3 flex-1 bg-gray-50/50">
           <div className="flex justify-between items-center">
             <h3 className="font-bold text-sm text-gray-800">세션 설정 (★: 신청자, [보류]: 보류)</h3>
@@ -821,7 +805,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
 }
 
 // --- [페이지 1] 학회원 메인 페이지 (/) ---
-function PublicPage({ songs, members, targetSongCount }) {
+function PublicPage({ songs, members, targetSongCount, pageTitle }) {
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAvailableOnly, setFilterAvailableOnly] = useState(false);
   const [filterCompletedOnly, setFilterCompletedOnly] = useState(false);
@@ -861,7 +845,7 @@ function PublicPage({ songs, members, targetSongCount }) {
       <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm pt-2 pb-4 space-y-4 border-b">
         <div className="relative flex items-center justify-center">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 text-center">
-            🔥불꽃: 2026 2정공 곡회의🔥
+            {pageTitle || '🔥불꽃: 2026 2정공 곡회의🔥'}
           </h1>
           <Link 
             to="/admin" 
@@ -889,7 +873,7 @@ function PublicPage({ songs, members, targetSongCount }) {
 }
 
 // --- [페이지 2] 관리자 페이지 (/admin) ---
-function AdminPage({ songs, members, targetSongCount, admins, logs }) {
+function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs }) {
   const [currentUser, setCurrentUser] = useState(null);
   const [usernameInput, setUsernameInput] = useState('');
   const [passwordInput, setPasswordInput] = useState('');
@@ -897,12 +881,15 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
   const [activeTab, setActiveTab] = useState('manage');
   const [editingSong, setEditingSong] = useState(null);
   const [targetInput, setTargetInput] = useState(targetSongCount);
+  const [titleInput, setTitleInput] = useState(pageTitle || '🔥불꽃: 2026 2정공 곡회의🔥');
 
   const [searchTerm, setSearchTerm] = useState('');
   const [filterAvailableOnly, setFilterAvailableOnly] = useState(false);
   const [filterCompletedOnly, setFilterCompletedOnly] = useState(false);
 
-  const [selectedMemberToRemove, setSelectedMemberToRemove] = useState('');
+  // 학회원 제거용 검색 State (요청 2 개선사항)
+  const [memberSearchQuery, setMemberSearchQuery] = useState('');
+  const [selectedMemberToRemove, setSelectedMemberToRemove] = useState(null);
 
   const [newTitle, setNewTitle] = useState('');
   const [newArtist, setNewArtist] = useState('');
@@ -924,6 +911,10 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
   useEffect(() => {
     setTargetInput(targetSongCount);
   }, [targetSongCount]);
+
+  useEffect(() => {
+    setTitleInput(pageTitle || '🔥불꽃: 2026 2정공 곡회의🔥');
+  }, [pageTitle]);
 
   const handleLogin = (e) => {
     e.preventDefault();
@@ -949,12 +940,11 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
 
   const handleRemoveMemberFromUncompletedSongs = () => {
     if (!selectedMemberToRemove) {
-      alert("제거할 학회원을 선택해주세요.");
+      alert("제거할 학회원을 먼저 검색하여 선택해주세요.");
       return;
     }
 
-    const targetMember = members[selectedMemberToRemove];
-    const memberNameStr = targetMember ? `${targetMember.name}(${targetMember.generation}기)` : '선택한 학회원';
+    const memberNameStr = `${selectedMemberToRemove.name}(${selectedMemberToRemove.generation}기)`;
 
     if (!window.confirm(`'${memberNameStr}' 님을 [완성] 및 [짤]이 아닌 모든 미완성 곡의 세션에서 제거하시겠습니까?`)) {
       return;
@@ -968,9 +958,9 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
 
       let songModified = false;
       const updatedSessions = song.sessions ? Object.values(song.sessions).map(session => {
-        if (session.assignedMembers && session.assignedMembers[selectedMemberToRemove]) {
+        if (session.assignedMembers && session.assignedMembers[selectedMemberToRemove.id]) {
           const newAssigned = { ...session.assignedMembers };
-          delete newAssigned[selectedMemberToRemove];
+          delete newAssigned[selectedMemberToRemove.id];
           songModified = true;
           return { ...session, assignedMembers: newAssigned };
         }
@@ -992,7 +982,8 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
       .then(() => {
         logActivity(currentUser, `[일괄 제거] ${memberNameStr} 님을 미완성 곡 ${affectedSongsCount}개에서 제거함`);
         alert(`${memberNameStr} 님이 총 ${affectedSongsCount}개 곡에서 제거되었습니다.`);
-        setSelectedMemberToRemove('');
+        setSelectedMemberToRemove(null);
+        setMemberSearchQuery('');
       })
       .catch(err => alert("일괄 제거 실패: " + err.message));
   };
@@ -1034,10 +1025,25 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
       .catch(err => alert("저장 실패: " + err.message));
   };
 
+  // 요청 1: 홈페이지 제목 변경 기능
+  const handleSavePageTitle = () => {
+    if (!titleInput.trim()) {
+      alert("홈페이지 제목을 입력해주세요.");
+      return;
+    }
+    set(ref(db, 'settings/pageTitle'), titleInput.trim())
+      .then(() => {
+        logActivity(currentUser, `홈페이지 제목 변경 -> [${titleInput.trim()}]`);
+        alert("홈페이지 제목이 수정되었습니다.");
+      })
+      .catch(err => alert("저장 실패: " + err.message));
+  };
+
   const toggleInitialSession = (st) => {
     setSelectedInitialSessions(prev => ({ ...prev, [st]: !prev[st] }));
   };
 
+  // 요청 3: 곡 추가 시 문구 제거 및 이동 안 함
   const handleAddSong = (e) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
@@ -1061,8 +1067,6 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
     logActivity(currentUser, `새 곡 추가: [${newTitle} - ${newArtist || '아티스트 미정'}]`);
     setNewTitle('');
     setNewArtist('');
-    alert('곡이 성공적으로 추가되었습니다.');
-    setActiveTab('manage');
   };
 
   const handleDeleteSong = (song) => {
@@ -1208,7 +1212,14 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
   });
   filteredMembers.sort((a, b) => a[1].name.localeCompare(b[1].name, 'ko'));
 
-  const sortedMemberList = Object.entries(members).sort((a, b) => a[1].name.localeCompare(b[1].name, 'ko'));
+  // 요청 2: 검색 필터링된 학회원 목록
+  const searchedMembersList = Object.entries(members)
+    .map(([id, m]) => ({ id, ...m }))
+    .filter(m => {
+      if (!memberSearchQuery.trim()) return false;
+      return m.name.toLowerCase().includes(memberSearchQuery.trim().toLowerCase());
+    })
+    .sort((a, b) => a.name.localeCompare(b.name, 'ko'));
 
   const sortedLogs = Object.values(logs).sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
 
@@ -1279,6 +1290,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
           4. 목표 곡 수 설정
         </button>
         
+        {/* 요청 1: 5-관리자 계정 관리, 6-홈페이지 관리, 7-수정 로그 확인 순서 맞춤 */}
         {currentUser.isSuperAdmin && (
           <>
             <button 
@@ -1290,12 +1302,20 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
               5. 관리자 계정 관리 ★
             </button>
             <button 
+              onClick={() => setActiveTab('site_manage')}
+              className={`px-4 py-2.5 text-sm font-bold border-b-2 whitespace-nowrap transition ${
+                activeTab === 'site_manage' ? 'border-red-700 text-red-800' : 'border-transparent text-gray-400 hover:text-gray-600'
+              }`}
+            >
+              6. 홈페이지 관리 ★
+            </button>
+            <button 
               onClick={() => setActiveTab('logs')}
               className={`px-4 py-2.5 text-sm font-bold border-b-2 whitespace-nowrap transition ${
                 activeTab === 'logs' ? 'border-red-700 text-red-800' : 'border-transparent text-gray-400 hover:text-gray-600'
               }`}
             >
-              6. 수정 로그 확인 ★
+              7. 수정 로그 확인 ★
             </button>
           </>
         )}
@@ -1303,34 +1323,74 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
 
       {activeTab === 'manage' && (
         <div className="space-y-4">
-          <div className="bg-amber-50 border border-amber-200 p-3.5 rounded-xl space-y-2">
+          {/* 요청 2: 학회원 일괄 제거 검색형 스마트 선택 UI */}
+          <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl space-y-3">
             <div className="text-xs font-bold text-amber-900 flex items-center gap-1">
               <span>🧹</span>
               <span>학회원 일괄 제거 (미완성 곡 한정)</span>
             </div>
-            <div className="flex flex-wrap items-center gap-2">
-              <select 
-                value={selectedMemberToRemove}
-                onChange={e => setSelectedMemberToRemove(e.target.value)}
-                className="border p-1.5 text-xs rounded-lg bg-white font-medium focus:ring-2 focus:ring-amber-500"
-              >
-                <option value="">-- 제거할 학회원 선택 --</option>
-                {sortedMemberList.map(([mId, m]) => (
-                  <option key={mId} value={mId}>
-                    {m.name} ({m.generation}기 · {m.part})
-                  </option>
-                ))}
-              </select>
+            
+            <div className="flex flex-col sm:flex-row gap-2 items-start sm:items-center">
+              <div className="relative w-full sm:w-64">
+                <input 
+                  type="text"
+                  placeholder="이름 검색 (예: 김)"
+                  value={memberSearchQuery}
+                  onChange={e => {
+                    setMemberSearchQuery(e.target.value);
+                    setSelectedMemberToRemove(null);
+                  }}
+                  className="w-full border p-2 text-xs rounded-lg bg-white focus:outline-none focus:ring-2 focus:ring-amber-500 font-medium"
+                />
+                {memberSearchQuery.trim() && (
+                  <div className="absolute left-0 right-0 top-full mt-1 bg-white border rounded-lg shadow-lg max-h-48 overflow-y-auto z-50 divide-y">
+                    {searchedMembersList.length === 0 ? (
+                      <div className="p-2.5 text-xs text-gray-400 text-center">검색 결과가 없습니다.</div>
+                    ) : (
+                      searchedMembersList.map(m => (
+                        <button
+                          key={m.id}
+                          type="button"
+                          onClick={() => {
+                            setSelectedMemberToRemove(m);
+                            setMemberSearchQuery('');
+                          }}
+                          className="w-full text-left p-2 text-xs hover:bg-amber-50 flex justify-between items-center"
+                        >
+                          <span className="font-bold text-gray-800">{m.name}</span>
+                          <span className="text-[11px] text-gray-500">{m.generation}기 · {m.part}</span>
+                        </button>
+                      ))
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {selectedMemberToRemove && (
+                <div className="flex items-center gap-2 bg-white px-3 py-1.5 rounded-lg border border-amber-300 text-xs">
+                  <span className="font-bold text-amber-900">
+                    선택됨: {selectedMemberToRemove.name} ({selectedMemberToRemove.generation}기)
+                  </span>
+                  <button 
+                    onClick={() => setSelectedMemberToRemove(null)}
+                    className="text-gray-400 hover:text-red-500 font-bold ml-1"
+                  >
+                    ✕
+                  </button>
+                </div>
+              )}
+
               <button 
                 onClick={handleRemoveMemberFromUncompletedSongs}
-                className="bg-amber-600 hover:bg-amber-700 text-white px-3 py-1.5 rounded-lg text-xs font-bold transition shadow-sm"
+                className="bg-amber-600 hover:bg-amber-700 text-white px-4 py-2 rounded-lg text-xs font-bold transition shadow-sm shrink-0"
               >
                 미완성 곡에서 일괄 제거
               </button>
-              <span className="text-[11px] text-amber-700 italic">
-                * '완성' 및 '짤' 상태인 곡은 유지되며, 아직 완성되지 않은 곡에서만 이름이 삭제됩니다.
-              </span>
             </div>
+
+            <p className="text-[11px] text-amber-700 italic">
+              * 이름 일부를 입력하여 대상을 검색한 뒤 클릭해 선택하세요. '완성' 및 '짤' 상태인 곡은 유지되며 미완성 곡에서만 제거됩니다.
+            </p>
           </div>
 
           <div className="flex flex-wrap justify-between items-center bg-gray-50 p-3 rounded-lg border gap-2">
@@ -1365,57 +1425,81 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
         </div>
       )}
 
+      {/* 요청 3 & 4: 곡 추가 폼 + 등록된 곡 목록 우측/하단 실시간 안내 표시 */}
       {activeTab === 'add' && (
-        <div className="max-w-2xl bg-emerald-50/50 p-6 rounded-xl border border-emerald-200 space-y-4">
-          <h2 className="font-bold text-gray-900 text-base">새 곡 추가하기</h2>
-          <form onSubmit={handleAddSong} className="space-y-4">
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">새 곡명 *</label>
-                <input 
-                  type="text" 
-                  placeholder="곡 제목 입력" 
-                  value={newTitle} 
-                  onChange={e => setNewTitle(e.target.value)}
-                  className="w-full border p-2 text-sm rounded bg-white"
-                  required
-                />
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+          <div className="lg:col-span-2 bg-emerald-50/50 p-6 rounded-xl border border-emerald-200 space-y-4 h-fit">
+            <h2 className="font-bold text-gray-900 text-base">새 곡 추가하기</h2>
+            <form onSubmit={handleAddSong} className="space-y-4">
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">새 곡명 *</label>
+                  <input 
+                    type="text" 
+                    placeholder="곡 제목 입력" 
+                    value={newTitle} 
+                    onChange={e => setNewTitle(e.target.value)}
+                    className="w-full border p-2 text-sm rounded bg-white"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="text-xs font-bold text-gray-700 block mb-1">가수명</label>
+                  <input 
+                    type="text" 
+                    placeholder="가수 이름 입력" 
+                    value={newArtist} 
+                    onChange={e => setNewArtist(e.target.value)}
+                    className="w-full border p-2 text-sm rounded bg-white"
+                  />
+                </div>
               </div>
-              <div>
-                <label className="text-xs font-bold text-gray-700 block mb-1">가수명</label>
-                <input 
-                  type="text" 
-                  placeholder="가수 이름 입력" 
-                  value={newArtist} 
-                  onChange={e => setNewArtist(e.target.value)}
-                  className="w-full border p-2 text-sm rounded bg-white"
-                />
-              </div>
-            </div>
 
-            <div className="pt-2 border-t border-emerald-200">
-              <span className="text-xs font-bold text-gray-700 block mb-2">포함할 기본 세션 선택:</span>
-              <div className="flex flex-wrap gap-3 text-xs bg-white p-3 rounded border border-emerald-200">
-                {SONG_SESSION_TYPES.map(st => (
-                  <label key={st} className="inline-flex items-center gap-1.5 cursor-pointer font-medium text-gray-800">
-                    <input 
-                      type="checkbox" 
-                      checked={!!selectedInitialSessions[st]} 
-                      onChange={() => toggleInitialSession(st)}
-                      className="rounded text-emerald-600 focus:ring-0"
-                    />
-                    {st}
-                  </label>
-                ))}
+              <div className="pt-2 border-t border-emerald-200">
+                <span className="text-xs font-bold text-gray-700 block mb-2">포함할 기본 세션 선택:</span>
+                <div className="flex flex-wrap gap-3 text-xs bg-white p-3 rounded border border-emerald-200">
+                  {SONG_SESSION_TYPES.map(st => (
+                    <label key={st} className="inline-flex items-center gap-1.5 cursor-pointer font-medium text-gray-800">
+                      <input 
+                        type="checkbox" 
+                        checked={!!selectedInitialSessions[st]} 
+                        onChange={() => toggleInitialSession(st)}
+                        className="rounded text-emerald-600 focus:ring-0"
+                      />
+                      {st}
+                    </label>
+                  ))}
+                </div>
               </div>
-            </div>
 
-            <div className="pt-2 flex justify-end">
-              <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded text-sm font-bold hover:bg-emerald-700">
-                + 곡 추가하기
-              </button>
+              <div className="pt-2 flex justify-end">
+                <button type="submit" className="bg-emerald-600 text-white px-6 py-2 rounded text-sm font-bold hover:bg-emerald-700">
+                  + 곡 추가하기
+                </button>
+              </div>
+            </form>
+          </div>
+
+          {/* 요청 4: 현재 있는 곡 목록 (곡명 - 가수) 표시 */}
+          <div className="bg-white p-5 rounded-xl border shadow-sm space-y-3 h-fit">
+            <div className="flex justify-between items-center border-b pb-2">
+              <h3 className="font-bold text-sm text-gray-800">🎵 현재 등록된 곡 ({songs.length}곡)</h3>
             </div>
-          </form>
+            <div className="max-h-[400px] overflow-y-auto space-y-1.5 pr-1">
+              {songs.length === 0 ? (
+                <p className="text-xs text-gray-400 text-center py-4">등록된 곡이 없습니다.</p>
+              ) : (
+                songs.map((s, idx) => (
+                  <div key={s.id || idx} className="text-xs p-2 bg-gray-50 rounded border flex items-center justify-between gap-2">
+                    <span className="font-semibold text-gray-800 truncate">
+                      {s.title} <span className="text-gray-500 font-normal">- {s.artist}</span>
+                    </span>
+                    {s.isCompleted && <span className="shrink-0 text-[10px] bg-blue-100 text-blue-700 font-bold px-1.5 py-0.5 rounded">완성</span>}
+                  </div>
+                ))
+              )}
+            </div>
+          </div>
         </div>
       )}
 
@@ -1595,6 +1679,29 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
         </div>
       )}
 
+      {/* 요청 1: 6. 홈페이지 관리 탭 구현 (최고 관리자 전용) */}
+      {activeTab === 'site_manage' && currentUser.isSuperAdmin && (
+        <div className="max-w-md bg-white p-6 rounded-xl border shadow-sm space-y-4">
+          <h2 className="font-bold text-gray-800 text-base">홈페이지 메인 제목 관리</h2>
+          <div>
+            <label className="text-xs font-bold text-gray-600 block mb-1">메인 제목</label>
+            <input 
+              type="text" 
+              value={titleInput} 
+              onChange={e => setTitleInput(e.target.value)}
+              placeholder="예: 🔥불꽃: 2026 2정공 곡회의🔥"
+              className="w-full border p-2 text-sm rounded bg-gray-50 font-bold"
+            />
+          </div>
+          <button 
+            onClick={handleSavePageTitle} 
+            className="w-full bg-red-600 text-white py-2 rounded text-xs font-bold hover:bg-red-700"
+          >
+            제목 수정 저장하기
+          </button>
+        </div>
+      )}
+
       {activeTab === 'logs' && (
         currentUser.isSuperAdmin ? (
           <div className="space-y-4">
@@ -1642,6 +1749,7 @@ export default function App() {
   const [admins, setAdmins] = useState({});
   const [logs, setLogs] = useState({});
   const [targetSongCount, setTargetSongCount] = useState(10);
+  const [pageTitle, setPageTitle] = useState('🔥불꽃: 2026 2정공 곡회의🔥');
 
   useEffect(() => {
     const songsRef = ref(db, 'songs');
@@ -1649,6 +1757,7 @@ export default function App() {
     const adminsRef = ref(db, 'admins');
     const logsRef = ref(db, 'logs');
     const targetRef = ref(db, 'settings/targetSongCount');
+    const titleRef = ref(db, 'settings/pageTitle');
 
     onValue(songsRef, (snapshot) => {
       const data = snapshot.val();
@@ -1671,13 +1780,18 @@ export default function App() {
       const val = snapshot.val();
       if (val !== null) setTargetSongCount(Number(val));
     });
+
+    onValue(titleRef, (snapshot) => {
+      const val = snapshot.val();
+      if (val) setPageTitle(val);
+    });
   }, []);
 
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<PublicPage songs={songs} members={members} targetSongCount={targetSongCount} />} />
-        <Route path="/admin" element={<AdminPage songs={songs} members={members} targetSongCount={targetSongCount} admins={admins} logs={logs} />} />
+        <Route path="/" element={<PublicPage songs={songs} members={members} targetSongCount={targetSongCount} pageTitle={pageTitle} />} />
+        <Route path="/admin" element={<AdminPage songs={songs} members={members} targetSongCount={targetSongCount} pageTitle={pageTitle} admins={admins} logs={logs} />} />
       </Routes>
     </BrowserRouter>
   );
