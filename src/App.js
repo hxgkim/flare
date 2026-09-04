@@ -385,7 +385,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
   const [saveStatus, setSaveStatus] = useState('saved');
   const isFirstRender = useRef(true);
 
-  // ★ 실시간 자동 저장 및 Firebase Sync
+// ★ 실시간 자동 저장 및 Firebase Sync
   useEffect(() => {
     // 최초 모달 열릴 때는 저장 실행 방지
     if (isFirstRender.current) {
@@ -433,6 +433,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     }, 300);
 
     return () => clearTimeout(timer);
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [title, artist, isCompleted, isDropped, sessions]);
 
   const addSession = () => {
