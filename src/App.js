@@ -440,7 +440,12 @@ function EditSongModal({ song, members, currentUser, onClose }) {
     setSessions(updated);
   };
 
-  const getFilteredMembersForSession = (sessionName) => {
+  // ★ [수정 및 반영된 핵심 로직] 선택 여부, 지망 순위, 이름순에 맞춘 실시간 자동 정렬 함수
+  const getFilteredMembersForSession = (sessionIndex, sessionName) => {
+    const session = sessions[sessionIndex];
+    const assignedMap = session?.assignedMembers || {};
+
+    // 1. 세션 파트 기준 1차 필터링
     const filtered = Object.entries(members).filter(([_, m]) => {
       if (sessionName === '리드기타' || sessionName === '백킹기타') {
         return m.part === '기타';
@@ -451,7 +456,40 @@ function EditSongModal({ song, members, currentUser, onClose }) {
       return m.part === sessionName;
     });
 
-    filtered.sort((a, b) => a[1].name.localeCompare(b[1].name, 'ko'));
+    // 2. 실시간 자동 정렬 (선택 여부 -> 순위 -> 이름순)
+    filtered.sort(([aId, aMember], [bId, bMember]) => {
+      const aDetail = assignedMap[aId];
+      const bDetail = assignedMap[bId];
+
+      const aChecked = !!aDetail;
+      const bChecked = !!bDetail;
+
+      // [조건 1] 선택(체크)된 학회원이 최우선
+      if (aChecked && !bChecked) return -1;
+      if (!aChecked && bChecked) return 1;
+
+      // [조건 2] 둘 다 선택된 경우 (지망 순위 반영)
+      if (aChecked && bChecked) {
+        const aRank = aDetail.rank !== '' && aDetail.rank !== undefined ? Number(aDetail.rank) : null;
+        const bRank = bDetail.rank !== '' && bDetail.rank !== undefined ? Number(bDetail.rank) : null;
+
+        // 둘 다 순위가 존재함 -> 숫자가 작은 순 (1지망 > 2지망...)
+        if (aRank !== null && bRank !== null) {
+          if (aRank !== bRank) return aRank - bRank;
+        }
+        // a만 순위가 존재함 -> a가 앞으로
+        if (aRank !== null && bRank === null) return -1;
+        // b만 순위가 존재함 -> b가 앞으로
+        if (aRank === null && bRank !== null) return 1;
+
+        // 순위가 같거나 입력되지 않은 경우 이름순
+        return aMember.name.localeCompare(bMember.name, 'ko');
+      }
+
+      // [조건 3] 둘 다 선택되지 않은 경우 -> 가나다순 정렬
+      return aMember.name.localeCompare(bMember.name, 'ko');
+    });
+
     return filtered;
   };
 
@@ -538,7 +576,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
                 onClick={handleSave} 
                 className="px-3.5 py-1.5 text-xs bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg font-bold transition shadow-sm"
               >
-                저장하기
+                저장
               </button>
             </div>
           </div>
@@ -618,7 +656,8 @@ function EditSongModal({ song, members, currentUser, onClose }) {
           </div>
 
           {sessions.map((session, sIdx) => {
-            const eligibleMembers = getFilteredMembersForSession(session.sessionName);
+            // ★ 수정된 함수에 sIdx(세션 인덱스) 전달
+            const eligibleMembers = getFilteredMembersForSession(sIdx, session.sessionName);
             const showDetailName = session.sessionName.includes('키보드');
             const showDifficulty = session.sessionName !== '보컬';
 
@@ -677,7 +716,7 @@ function EditSongModal({ song, members, currentUser, onClose }) {
                         const isPending = assignedMap[mId]?.isPending || false;
 
                         return (
-                          <div key={mId} className={`flex items-center gap-1.5 text-xs p-1 rounded border ${
+                          <div key={mId} className={`flex items-center gap-1.5 text-xs p-1 rounded border transition-all ${
                             isChecked ? 'bg-emerald-50 border-emerald-500 font-bold' : 'bg-white border-gray-200'
                           }`}>
                             <label className="inline-flex items-center gap-1 cursor-pointer">
@@ -1162,7 +1201,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
         <ProgressBarStatus songs={songs} targetSongCount={targetSongCount} />
       </div>
 
-      {/* === [수정된 탭 메뉴 영역] === */}
+      {/* === [탭 메뉴 영역] === */}
       <div className="flex border-b overflow-x-auto">
         <button 
           onClick={() => setActiveTab('manage')}
