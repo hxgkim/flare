@@ -368,7 +368,7 @@ function SongListView({ songs, members, showAdminActions = false, onEditSong, on
   );
 }
 
-// --- [관리자] 곡 세션 및 인원 수정 모달 (상단 고정 개선 적용) ---
+// --- [관리자] 곡 세션 및 인원 수정 모달 ---
 function EditSongModal({ song, members, currentUser, onClose }) {
   const [title, setTitle] = useState(song.title || '');
   const [artist, setArtist] = useState(song.artist || '');
@@ -525,7 +525,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
         
         {/* === [상단 고정 헤더 영역] === */}
         <div className="p-5 border-b bg-white space-y-4 shrink-0 shadow-sm z-10">
-          {/* 헤더 제목 & 우측 취소/저장 버튼 */}
           <div className="flex justify-between items-center">
             <h2 className="text-lg font-bold text-gray-900">곡 세션 및 인원 상세 수정</h2>
             <div className="flex gap-2">
@@ -544,7 +543,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
             </div>
           </div>
 
-          {/* 곡명 및 가수 입력란 */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="text-xs font-bold text-gray-600 block mb-1">곡명</label>
@@ -566,7 +564,6 @@ function EditSongModal({ song, members, currentUser, onClose }) {
             </div>
           </div>
 
-          {/* 곡 상태 설정 (완성/짤) */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div className="bg-blue-50/70 p-2.5 rounded-lg border border-blue-200 flex items-center justify-between">
               <div>
@@ -776,7 +773,6 @@ function PublicPage({ songs, members, targetSongCount }) {
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto font-sans space-y-6">
-      {/* 고정 상단 영역 (Sticky Header) */}
       <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm pt-2 pb-4 space-y-4 border-b">
         <div className="relative flex items-center justify-center">
           <h1 className="text-xl md:text-2xl font-bold text-gray-900 text-center">
@@ -1135,7 +1131,6 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
 
   return (
     <div className="p-4 md:p-8 max-w-6xl mx-auto font-sans space-y-6">
-      {/* 고정 상단 영역 (Sticky Header) */}
       <div className="sticky top-0 z-40 bg-white/95 backdrop-blur-sm pt-2 pb-4 space-y-4 border-b">
         <div className="relative flex items-center justify-center">
           <div className="text-center">
@@ -1167,6 +1162,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
         <ProgressBarStatus songs={songs} targetSongCount={targetSongCount} />
       </div>
 
+      {/* === [수정된 탭 메뉴 영역] === */}
       <div className="flex border-b overflow-x-auto">
         <button 
           onClick={() => setActiveTab('manage')}
@@ -1174,7 +1170,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
             activeTab === 'manage' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
-          1. 곡 현황 및 세션 관리
+          1. 곡 현황
         </button>
         <button 
           onClick={() => setActiveTab('add')}
@@ -1182,7 +1178,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
             activeTab === 'add' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
-          2. 새 곡 추가
+          2. 곡 추가
         </button>
         <button 
           onClick={() => setActiveTab('members')}
@@ -1190,7 +1186,7 @@ function AdminPage({ songs, members, targetSongCount, admins, logs }) {
             activeTab === 'members' ? 'border-emerald-600 text-emerald-600' : 'border-transparent text-gray-400 hover:text-gray-600'
           }`}
         >
-          3. 학회원 명단 관리
+          3. 학회원 관리
         </button>
         <button 
           onClick={() => setActiveTab('settings')}
