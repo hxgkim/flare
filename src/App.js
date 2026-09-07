@@ -599,8 +599,14 @@ function EditSongModal({ song, members, currentUser, onClose }) {
   };
 
   return (
-    <div className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50">
-      <div className="bg-white rounded-xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden shadow-2xl">
+    <div 
+      onClick={onClose} 
+      className="fixed inset-0 bg-black/50 flex items-center justify-center p-4 z-50 cursor-pointer"
+    >
+      <div 
+        onClick={(e) => e.stopPropagation()} 
+        className="bg-white rounded-xl max-w-2xl w-full flex flex-col max-h-[90vh] overflow-hidden shadow-2xl cursor-default"
+      >
         <div className="p-5 border-b bg-white space-y-4 shrink-0 shadow-sm z-10">
           <div className="flex justify-between items-center">
             <div className="flex items-center gap-3">
