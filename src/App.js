@@ -817,8 +817,9 @@ function PublicPage({ songs, members, targetSongCount, pageTitle }) {
       return false;
     }
 
+    // 수정: 잔여 선택 시 완성이 아닌 곡은 잔여 세션 개수가 0이어도 모두 표시
     if (filterAvailableOnly) {
-      if (song.isCompleted || calculateUnassignedSessions(song.sessions) === 0) {
+      if (song.isCompleted) {
         return false;
       }
     }
@@ -887,7 +888,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
   const [filterAvailableOnly, setFilterAvailableOnly] = useState(false);
   const [filterCompletedOnly, setFilterCompletedOnly] = useState(false);
 
-  // 학회원 제거용 검색 State (요청 2 개선사항)
   const [memberSearchQuery, setMemberSearchQuery] = useState('');
   const [selectedMemberToRemove, setSelectedMemberToRemove] = useState(null);
 
@@ -1025,7 +1025,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
       .catch(err => alert("저장 실패: " + err.message));
   };
 
-  // 요청 1: 홈페이지 제목 변경 기능
   const handleSavePageTitle = () => {
     if (!titleInput.trim()) {
       alert("홈페이지 제목을 입력해주세요.");
@@ -1043,7 +1042,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
     setSelectedInitialSessions(prev => ({ ...prev, [st]: !prev[st] }));
   };
 
-  // 요청 3: 곡 추가 시 문구 제거 및 이동 안 함
   const handleAddSong = (e) => {
     e.preventDefault();
     if (!newTitle.trim()) return;
@@ -1183,8 +1181,9 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
       return false;
     }
 
+    // 수정: 잔여 선택 시 completed와 dropped를 제외하고 0명 잔여 포함 전체 표시
     if (filterAvailableOnly) {
-      if (song.isCompleted || song.isDropped || calculateUnassignedSessions(song.sessions) === 0) {
+      if (song.isCompleted || song.isDropped) {
         return false;
       }
     }
@@ -1212,7 +1211,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
   });
   filteredMembers.sort((a, b) => a[1].name.localeCompare(b[1].name, 'ko'));
 
-  // 요청 2: 검색 필터링된 학회원 목록
   const searchedMembersList = Object.entries(members)
     .map(([id, m]) => ({ id, ...m }))
     .filter(m => {
@@ -1290,7 +1288,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
           4. 목표 곡 수 설정
         </button>
         
-        {/* 요청 1: 5-관리자 계정 관리, 6-홈페이지 관리, 7-수정 로그 확인 순서 맞춤 */}
         {currentUser.isSuperAdmin && (
           <>
             <button 
@@ -1323,7 +1320,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
 
       {activeTab === 'manage' && (
         <div className="space-y-4">
-          {/* 요청 2: 학회원 일괄 제거 검색형 스마트 선택 UI */}
           <div className="bg-amber-50 border border-amber-200 p-4 rounded-xl space-y-3">
             <div className="text-xs font-bold text-amber-900 flex items-center gap-1">
               <span>🧹</span>
@@ -1425,7 +1421,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
         </div>
       )}
 
-      {/* 요청 3 & 4: 곡 추가 폼 + 등록된 곡 목록 우측/하단 실시간 안내 표시 */}
       {activeTab === 'add' && (
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 bg-emerald-50/50 p-6 rounded-xl border border-emerald-200 space-y-4 h-fit">
@@ -1480,7 +1475,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
             </form>
           </div>
 
-          {/* 요청 4: 현재 있는 곡 목록 (곡명 - 가수) 표시 */}
           <div className="bg-white p-5 rounded-xl border shadow-sm space-y-3 h-fit">
             <div className="flex justify-between items-center border-b pb-2">
               <h3 className="font-bold text-sm text-gray-800">🎵 현재 등록된 곡 ({songs.length}곡)</h3>
@@ -1679,7 +1673,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
         </div>
       )}
 
-      {/* 요청 1: 6. 홈페이지 관리 탭 구현 (최고 관리자 전용) */}
       {activeTab === 'site_manage' && currentUser.isSuperAdmin && (
         <div className="max-w-md bg-white p-6 rounded-xl border shadow-sm space-y-4">
           <h2 className="font-bold text-gray-800 text-base">홈페이지 메인 제목 관리</h2>
