@@ -1079,8 +1079,16 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
     });
 
     logActivity(currentUser, `새 곡 추가: [${newTitle} - ${newArtist || '아티스트 미정'}]`);
+    
+    // 폼 입력란 초기화 (곡명, 가수, 세션 설정)
     setNewTitle('');
     setNewArtist('');
+    setSessionConfigs(
+      SONG_SESSION_TYPES.reduce((acc, curr) => ({
+        ...acc,
+        [curr]: { selected: true, difficulty: '', detailName: '' }
+      }), {})
+    );
   };
 
   const handleDeleteSong = (song) => {
