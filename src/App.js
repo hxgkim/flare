@@ -817,7 +817,6 @@ function PublicPage({ songs, members, targetSongCount, pageTitle }) {
       return false;
     }
 
-    // 수정: 잔여 선택 시 완성이 아닌 곡은 잔여 세션 개수가 0이어도 모두 표시
     if (filterAvailableOnly) {
       if (song.isCompleted) {
         return false;
@@ -893,8 +892,13 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
 
   const [newTitle, setNewTitle] = useState('');
   const [newArtist, setNewArtist] = useState('');
-  const [selectedInitialSessions, setSelectedInitialSessions] = useState(
-    SONG_SESSION_TYPES.reduce((acc, curr) => ({ ...acc, [curr]: true }), {})
+  
+  // 세션 설정 구조화 (선택 여부, 난이도, 세부파트)
+  const [sessionConfigs, setSessionConfigs] = useState(
+    SONG_SESSION_TYPES.reduce((acc, curr) => ({
+      ...acc,
+      [curr]: { selected: true, difficulty: '', detailName: '' }
+    }), {})
   );
 
   const [memberName, setMemberName] = useState('');
@@ -1038,8 +1042,14 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
       .catch(err => alert("저장 실패: " + err.message));
   };
 
-  const toggleInitialSession = (st) => {
-    setSelectedInitialSessions(prev => ({ ...prev, [st]: !prev[st] }));
+  const updateSessionConfig = (st, field, value) => {
+    setSessionConfigs(prev => ({
+      ...prev,
+      [st]: {
+        ...prev[st],
+        [field]: value
+      }
+    }));
   };
 
   const handleAddSong = (e) => {
@@ -1047,8 +1057,14 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
     if (!newTitle.trim()) return;
 
     const initialSessions = SONG_SESSION_TYPES
-      .filter(st => selectedInitialSessions[st])
-      .map(st => ({ sessionName: st, requiredCount: 1, assignedMembers: {} }));
+      .filter(st => sessionConfigs[st]?.selected)
+      .map(st => ({
+        sessionName: st,
+        detailName: sessionConfigs[st]?.detailName || '',
+        difficulty: sessionConfigs[st]?.difficulty || '',
+        requiredCount: 1,
+        assignedMembers: {}
+      }));
 
     const songsRef = ref(db, 'songs');
     const newSongRef = push(songsRef);
@@ -1181,7 +1197,6 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
       return false;
     }
 
-    // 수정: 잔여 선택 시 completed와 dropped를 제외하고 0명 잔여 포함 전체 표시
     if (filterAvailableOnly) {
       if (song.isCompleted || song.isDropped) {
         return false;
@@ -1450,20 +1465,50 @@ function AdminPage({ songs, members, targetSongCount, pageTitle, admins, logs })
                 </div>
               </div>
 
-              <div className="pt-2 border-t border-emerald-200">
-                <span className="text-xs font-bold text-gray-700 block mb-2">포함할 기본 세션 선택:</span>
-                <div className="flex flex-wrap gap-3 text-xs bg-white p-3 rounded border border-emerald-200">
-                  {SONG_SESSION_TYPES.map(st => (
-                    <label key={st} className="inline-flex items-center gap-1.5 cursor-pointer font-medium text-gray-800">
-                      <input 
-                        type="checkbox" 
-                        checked={!!selectedInitialSessions[st]} 
-                        onChange={() => toggleInitialSession(st)}
-                        className="rounded text-emerald-600 focus:ring-0"
-                      />
-                      {st}
-                    </label>
-                  ))}
+              <div className="pt-2 border-t border-emerald-200 space-y-2">
+                <span className="text-xs font-bold text-gray-700 block">포함할 세션 선택 및 상세 옵션 설정:</span>
+                <div className="space-y-2">
+                  {SONG_SESSION_TYPES.map(st => {
+                    const isSelected = !!sessionConfigs[st]?.selected;
+                    const showDetailName = st.includes('키보드');
+                    const showDifficulty = st !== '보컬';
+
+                    return (
+                      <div key={st} className={`p-2.5 rounded border text-xs flex flex-wrap items-center gap-2.5 transition-all ${
+                        isSelected ? 'bg-white border-emerald-300' : 'bg-gray-50/50 border-gray-200 opacity-60'
+                      }`}>
+                        <label className="inline-flex items-center gap-1.5 cursor-pointer font-bold text-gray-800 min-w-[70px]">
+                          <input 
+                            type="checkbox" 
+                            checked={isSelected} 
+                            onChange={e => updateSessionConfig(st, 'selected', e.target.checked)}
+                            className="rounded text-emerald-600 focus:ring-0"
+                          />
+                          {st}
+                        </label>
+
+                        {isSelected && showDetailName && (
+                          <input 
+                            type="text" 
+                            placeholder="세부파트 (예: 1, 2)" 
+                            value={sessionConfigs[st]?.detailName || ''} 
+                            onChange={e => updateSessionConfig(st, 'detailName', e.target.value)}
+                            className="border p-1.5 text-xs rounded w-32 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        )}
+
+                        {isSelected && showDifficulty && (
+                          <input 
+                            type="text" 
+                            placeholder="난이도 (예: 상, 중)" 
+                            value={sessionConfigs[st]?.difficulty || ''} 
+                            onChange={e => updateSessionConfig(st, 'difficulty', e.target.value)}
+                            className="border p-1.5 text-xs rounded w-28 bg-white focus:outline-none focus:ring-1 focus:ring-emerald-500"
+                          />
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               </div>
 
