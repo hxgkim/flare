@@ -82,7 +82,22 @@ const renderAssignedMembers = (assignedMembers, members) => {
     };
   });
 
-  list.sort((a, b) => a.rank - b.rank);
+  // 1. 순위(rank) 오름차순 정렬
+  // 2. 순위가 같을 경우 곡 신청자(isRequester === true) 우선 정렬
+  // 3. 신청 여부도 같을 경우 이름(name) 가나다순 정렬
+  list.sort((a, b) => {
+    if (a.rank !== b.rank) {
+      return a.rank - b.rank;
+    }
+    
+    // 순위가 같은 경우: 신청자(true)를 앞으로 배치
+    if (a.isRequester !== b.isRequester) {
+      return a.isRequester ? -1 : 1;
+    }
+
+    // 순위와 신청 여부가 모두 같은 경우: 이름순
+    return a.name.localeCompare(b.name, 'ko');
+  });
 
   return (
     <span>
